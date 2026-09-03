@@ -16,3 +16,21 @@ export const supabase = MOCK_MODE
  * Insert an incident row. Works identically in mock or live mode.
  */
 export async function insertIncident(payload) {
+  if (MOCK_MODE) {
+    console.log('[MOCK] incident insert ->', JSON.stringify(payload, null, 2));
+    await new Promise((r) => setTimeout(r, 300));
+    return { data: { ...payload, id: 'mock-' + Date.now() }, error: null };
+  }
+  return supabase.from('incidents').insert(payload);
+}
+
+/**
+ * Upload audio clip to Supabase Storage. Returns public URL.
+ */
+export async function uploadAudio(uri) {
+  if (MOCK_MODE) {
+    console.log('[MOCK] audio upload ->', uri);
+    await new Promise((r) => setTimeout(r, 200));
+    return 'mock://audio/distress-clip.m4a';
+  }
+
