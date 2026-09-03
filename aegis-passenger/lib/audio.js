@@ -8,3 +8,9 @@ export async function requestAudioPermission() {
   if (MOCK_MODE) return true;
   try {
     const { granted } = await AudioModule.requestRecordingPermissionsAsync();
+    return granted;
+  } catch (e) {
+    console.log('[audio] permission request failed:', e.message);
+    return false;
+  }
+}
