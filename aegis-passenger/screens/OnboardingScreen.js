@@ -60,3 +60,65 @@ export default function OnboardingScreen({ onComplete }) {
   return (
     <KeyboardAvoidingView
       style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    >
+      <StatusBar style="light" />
+
+      <Image
+        source={require('../assets/aegis-logo.png')}
+        style={styles.logo}
+        resizeMode="contain"
+      />
+
+      <Text style={styles.heading}>Set up your shield</Text>
+      <Text style={styles.sub}>
+        Enter your info and your emergency contact. This person will be alerted
+        if you trigger an SOS.
+      </Text>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Your name</Text>
+        <TextInput
+          style={styles.input}
+          value={name}
+          onChangeText={setName}
+          placeholder="Abdullahi"
+          placeholderTextColor={COLORS.midGray}
+        />
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Your phone number</Text>
+        <TextInput
+          style={styles.input}
+          value={phone}
+          onChangeText={setPhone}
+          placeholder="+234 801 234 5678"
+          placeholderTextColor={COLORS.midGray}
+          keyboardType="phone-pad"
+        />
+      </View>
+
+      <View style={styles.inputGroup}>
+        <Text style={styles.label}>Watcher's phone number</Text>
+        <TextInput
+          style={styles.input}
+          value={watcherPhone}
+          onChangeText={setWatcherPhone}
+          placeholder="+234 901 234 5678"
+          placeholderTextColor={COLORS.midGray}
+          keyboardType="phone-pad"
+        />
+      </View>
+
+      <TouchableOpacity
+        style={[styles.btn, saving && styles.btnDisabled]}
+        onPress={handleSave}
+        disabled={saving}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.btnText}>
+          {saving ? 'Saving...' : 'Activate Aegis'}
+        </Text>
+      </TouchableOpacity>
+    </KeyboardAvoidingView>
