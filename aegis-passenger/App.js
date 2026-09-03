@@ -40,3 +40,24 @@ export default function App() {
           <Stack.Screen name="Permissions">
             {(props) => (
               <PermissionsScreen
+                {...props}
+                onGranted={() => setPermissionsGranted(true)}
+              />
+            )}
+          </Stack.Screen>
+        ) : !hasOnboarded ? (
+          <Stack.Screen name="Onboarding">
+            {(props) => (
+              <OnboardingScreen
+                {...props}
+                onComplete={() => setHasOnboarded(true)}
+              />
+            )}
+          </Stack.Screen>
+        ) : (
+          <Stack.Screen name="BlackScreen" component={BlackScreen} />
+        )}
+      </Stack.Navigator>
+    </NavigationContainer>
+  );
+}
