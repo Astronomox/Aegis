@@ -16,3 +16,21 @@ AEGIS/
 ## Passenger app
 
 ```
+cd aegis-passenger
+pnpm install
+pnpm exec expo start
+```
+
+Scan the QR with Expo Go. Runs in mock mode out of the box, no Supabase
+connection required to demo the flow.
+
+## Watcher dashboard
+
+```
+cd aegis-watcher
+pnpm install
+pnpm dev
+```
+
+Opens at `localhost:3000`. Landing page explains both sides of the product;
+`/login` is the passcode gate for watchers, default passcode is `1234` unless
