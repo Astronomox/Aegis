@@ -34,3 +34,22 @@ export async function uploadAudio(uri) {
     return 'mock://audio/distress-clip.m4a';
   }
 
+  const filename = `clip-${Date.now()}.m4a`;
+  const response = await fetch(uri);
+  const blob = await response.blob();
+
+  const { error } = await supabase.storage
+    .from('audio-clips')
+    .upload(filename, blob, { contentType: 'audio/m4a' });
+
+  if (error) {
+    console.log('[supabase] upload error:', error.message);
+    return null;
+  }
+
+  const { data } = supabase.storage
+    .from('audio-clips')
+    .getPublicUrl(filename);
+
+  return data.publicUrl;
+}
