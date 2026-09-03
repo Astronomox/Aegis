@@ -4,3 +4,7 @@ node_modules/
 dist/
 out/
 web-build/
+.env
+.env.local
+*.log
+.DS_Store
