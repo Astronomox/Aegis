@@ -136,3 +136,73 @@ export default function HistoryPage() {
                   }}>{timeAgo(inc.created_at)}</span>
                 </div>
               </button>
+            ))
+          ) : (
+            // Desktop: 4-column grid row per incident
+            incidents.map((inc) => (
+              <button
+                key={inc.id}
+                onClick={() => router.push(`/dashboard/incidents/${inc.id}`)}
+                style={{
+                  display: 'grid', gridTemplateColumns: '1fr 1.2fr 0.6fr 0.6fr',
+                  width: '100%', padding: '12px 16px', textAlign: 'left',
+                  background: 'transparent', border: 'none', borderBottom: '1px solid rgba(0,0,0,0.025)',
+                  transition: 'background 0.15s', cursor: 'pointer',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = 'rgba(0,0,0,0.025)')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>
+                  {MOCK_MODE ? MOCK_USERS[inc.passenger_id] || inc.passenger_id : inc.passenger_id}
+                </span>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-dim)' }}>
+                  {inc.latitude.toFixed(4)}, {inc.longitude.toFixed(4)}
+                </span>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-muted)' }}>
+                  {inc.trigger_type.toUpperCase()}
+                </span>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-muted)' }}>
+                  {timeAgo(inc.created_at)}
+                </span>
+              </button>
+            ))
+          )}
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            gap: 16, marginTop: 20,
+          }}>
+            <button
+              disabled={currentPage <= 1}
+              onClick={() => router.push(`/dashboard/history?page=${currentPage - 1}`)}
+              style={{
+                fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 600,
+                color: 'var(--text-dim)', letterSpacing: 1,
+                background: 'var(--glass)', border: '1px solid var(--glass-border)',
+                padding: '8px 16px', borderRadius: 4,
+                opacity: currentPage <= 1 ? 0.3 : 1, cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
+              }}
+            >PREV</button>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-muted)' }}>
+              {currentPage} / {totalPages}
+            </span>
+            <button
+              disabled={currentPage >= totalPages}
+              onClick={() => router.push(`/dashboard/history?page=${currentPage + 1}`)}
+              style={{
+                fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 600,
+                color: 'var(--text-dim)', letterSpacing: 1,
+                background: 'var(--glass)', border: '1px solid var(--glass-border)',
+                padding: '8px 16px', borderRadius: 4,
+                opacity: currentPage >= totalPages ? 0.3 : 1, cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
+              }}
+            >NEXT</button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
