@@ -382,3 +382,195 @@ export default function DashboardPage() {
             <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
               <a
                 href={`https://www.google.com/maps?q=${selected.latitude},${selected.longitude}`}
+                target="_blank" rel="noopener noreferrer"
+                style={{
+                  flex: 1, textAlign: 'center',
+                  fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 600,
+                  color: 'var(--blue)', letterSpacing: 1,
+                  background: 'var(--blue-dim)', border: '1px solid rgba(68,138,255,0.15)',
+                  padding: '10px 0', borderRadius: 4, transition: 'all 0.2s',
+                }}
+              >OPEN MAP</a>
+
+              {selected.status === 'active' && (
+                <button
+                  onClick={() => router.push(`/dashboard/incidents/${selected.id}`)}
+                  style={{
+                    flex: 1,
+                    fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 600,
+                    color: 'var(--green)', letterSpacing: 1,
+                    background: 'var(--green-dim)', border: '1px solid rgba(0,230,118,0.15)',
+                    padding: '10px 0', borderRadius: 4, transition: 'all 0.2s',
+                  }}
+                >RESPOND</button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* STATS STRIP - hidden on mobile when a drawer is open, to avoid clutter */}
+      {!(isMobile && (feedOpen || selected)) && (
+        <div style={{
+          position: 'absolute',
+          bottom: isMobile ? 76 : 16,
+          left: '50%', transform: 'translateX(-50%)', zIndex: 10,
+          display: 'flex', alignItems: 'stretch',
+          background: 'var(--glass)', backdropFilter: 'var(--blur)',
+          border: '1px solid var(--glass-border)', borderRadius: 8,
+          overflow: 'hidden',
+        }}>
+          {[
+            { label: 'TODAY', value: todayCount },
+            { label: 'AVG AGE', value: avgResponseMs !== null ? `${avgResponseMs}m` : '--' },
+            { label: 'RESOLVED', value: `${resolvedRate}%` },
+          ].map((stat, i) => (
+            <div
+              key={stat.label}
+              style={{
+                padding: isMobile ? '6px 12px' : '8px 18px',
+                borderLeft: i > 0 ? '1px solid var(--glass-border)' : 'none',
+                textAlign: 'center',
+              }}
+            >
+              <div style={{ fontFamily: 'var(--mono)', fontSize: isMobile ? 12 : 15, fontWeight: 700, color: 'var(--text)', lineHeight: 1.2 }}>
+                {stat.value}
+              </div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 7, color: 'var(--text-muted)', letterSpacing: 1, marginTop: 2 }}>
+                {stat.label}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* BOTTOM STATUS BAR - desktop only, mobile has no room for it */}
+      {!isMobile && (
+        <div style={{
+          position: 'absolute', bottom: 16, right: 16, zIndex: 10,
+          display: 'flex', alignItems: 'center', gap: 16,
+          padding: '8px 14px',
+          background: 'var(--glass)', backdropFilter: 'var(--blur)',
+          border: '1px solid var(--glass-border)', borderRadius: 6,
+        }}>
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-muted)', letterSpacing: 1 }}>
+            {MOCK_MODE ? 'MOCK' : 'LIVE'} MODE
+          </span>
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-muted)' }}>
+            LAT 6.5244 · LON 3.3792
+          </span>
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-muted)' }}>
+            {clientTime ?? '--:--:--'}
+          </span>
+        </div>
+      )}
+
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.3; }
+        }
+      `}</style>
+    </>
+  );
+}
+
+function FeedHeader({ onClose }: { onClose?: () => void }) {
+  return (
+    <div style={{
+      padding: '12px 14px', borderBottom: '1px solid var(--glass-border)',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    }}>
+      <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, color: 'var(--text-dim)', letterSpacing: 2 }}>
+        INCIDENT FEED
+      </span>
+      {onClose ? (
+        <button
+          onClick={onClose}
+          style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: 16, padding: '0 4px' }}
+        >×</button>
+      ) : (
+        <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-muted)' }}>LIVE</span>
+      )}
+    </div>
+  );
+}
+
+function FeedList({
+  loading, incidents, selectedId, onSelect,
+}: {
+  loading: boolean;
+  incidents: Incident[];
+  selectedId: string | null;
+  onSelect: (id: string) => void;
+}) {
+  return (
+    <div style={{ flex: 1, overflowY: 'auto', padding: 6 }}>
+      {loading ? (
+        <div style={{ padding: 20, textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-muted)' }}>
+          LOADING...
+        </div>
+      ) : incidents.length === 0 ? (
+        <div style={{ padding: 40, textAlign: 'center' }}>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-muted)', letterSpacing: 2 }}>
+            NO INCIDENTS
+          </div>
+          <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-muted)', marginTop: 8 }}>
+            MONITORING...
+          </div>
+        </div>
+      ) : (
+        incidents.map((inc) => {
+          const isActive = inc.status === 'active';
+          const isSelected = inc.id === selectedId;
+          return (
+            <button
+              key={inc.id}
+              onClick={() => onSelect(inc.id)}
+              style={{
+                width: '100%', textAlign: 'left',
+                padding: '10px 12px', marginBottom: 2,
+                background: isSelected ? 'rgba(0,0,0,0.05)' : 'transparent',
+                border: 'none', borderRadius: 6,
+                borderLeft: isActive ? '2px solid var(--red)' : '2px solid transparent',
+                transition: 'all 0.15s', cursor: 'pointer',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+                <span style={{
+                  fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, letterSpacing: 1,
+                  color: isActive ? 'var(--red)' : 'var(--text-muted)',
+                }}>
+                  {isActive ? '● ACTIVE' : '○ RESOLVED'}
+                </span>
+                <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-muted)' }}>
+                  {timeAgo(inc.created_at)}
+                </span>
+              </div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
+                {MOCK_MODE ? MOCK_USERS[inc.passenger_id] || inc.passenger_id : inc.passenger_id}
+              </div>
+              <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-muted)' }}>
+                {inc.latitude.toFixed(4)}, {inc.longitude.toFixed(4)}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                <span style={{
+                  fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-dim)',
+                  background: 'rgba(0,0,0,0.03)', padding: '2px 6px', borderRadius: 3,
+                }}>
+                  {inc.trigger_type === 'audio' ? 'MIC' : 'TAP'}
+                </span>
+                {inc.audio_url && (
+                  <span style={{
+                    fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--blue)',
+                    background: 'var(--blue-dim)', padding: '2px 6px', borderRadius: 3,
+                  }}>AUDIO</span>
+                )}
+              </div>
+            </button>
+          );
+        })
+      )}
+    </div>
+  );
+}
