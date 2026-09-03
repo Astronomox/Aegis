@@ -19,3 +19,24 @@ export default function App() {
   const checkPermissions = useCallback(async () => {
     try {
       const locStatus = await Location.getForegroundPermissionsAsync();
+      const audioStatus = await AudioModule.getRecordingPermissionsAsync();
+      setPermissionsGranted(locStatus.granted && audioStatus.granted);
+    } catch {
+      setPermissionsGranted(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => checkPermissions(), 2000);
+    return () => clearTimeout(timer);
+  }, [checkPermissions]);
+
+  return (
+    <NavigationContainer>
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {permissionsGranted === null ? (
+          <Stack.Screen name="Splash" component={SplashScreen} />
+        ) : !permissionsGranted ? (
+          <Stack.Screen name="Permissions">
+            {(props) => (
+              <PermissionsScreen
