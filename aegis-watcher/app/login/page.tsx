@@ -136,3 +136,72 @@ export default function PasscodeGate() {
           }}
           onFocus={(e) => e.target.style.borderColor = 'rgba(255,59,59,0.3)'}
           onBlur={(e) => e.target.style.borderColor = 'rgba(0,0,0,0.08)'}
+        />
+
+        {error && (
+          <div style={{
+            fontFamily: 'var(--mono)',
+            fontSize: 11,
+            color: 'var(--red)',
+            marginTop: 12,
+            letterSpacing: 2,
+          }}>{error}</div>
+        )}
+
+        <button
+          onClick={handleSubmit}
+          disabled={loading}
+          style={{
+            width: '100%',
+            marginTop: 16,
+            padding: '13px 0',
+            background: loading ? 'rgba(255,59,59,0.15)' : 'rgba(255,59,59,0.1)',
+            border: '1px solid rgba(255,59,59,0.2)',
+            borderRadius: 4,
+            fontFamily: 'var(--mono)',
+            fontSize: 12,
+            fontWeight: 600,
+            color: 'var(--red)',
+            letterSpacing: 3,
+            transition: 'all 0.2s',
+            opacity: loading ? 0.5 : 1,
+          }}
+          onMouseEnter={(e) => {
+            if (!loading) {
+              (e.target as HTMLElement).style.background = 'rgba(255,59,59,0.2)';
+              (e.target as HTMLElement).style.boxShadow = '0 0 20px rgba(255,59,59,0.15)';
+            }
+          }}
+          onMouseLeave={(e) => {
+            (e.target as HTMLElement).style.background = 'rgba(255,59,59,0.1)';
+            (e.target as HTMLElement).style.boxShadow = 'none';
+          }}
+        >
+          {loading ? 'AUTHENTICATING...' : 'AUTHENTICATE'}
+        </button>
+
+        <div style={{
+          fontFamily: 'var(--mono)',
+          fontSize: 9,
+          color: 'var(--text-muted)',
+          marginTop: 32,
+          letterSpacing: 1,
+        }}>
+          ENCRYPTED CHANNEL · AES-256
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes scanline {
+          0%, 100% { transform: translateY(0); opacity: 0; }
+          50% { transform: translateY(100vh); opacity: 1; }
+        }
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.3; }
+        }
+        input::placeholder { color: rgba(0,0,0,0.25); letter-spacing: 3px; font-size: 11px; }
+      `}</style>
+    </div>
+  );
+}
