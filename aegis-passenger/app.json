@@ -11,31 +11,3 @@
       "resizeMode": "contain",
       "backgroundColor": "#0A0A0A"
     },
-    "android": {
-      "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
-        "backgroundColor": "#0A0A0A"
-      },
-      "permissions": [
-        "RECORD_AUDIO",
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "VIBRATE"
-      ]
-    },
-    "ios": {
-      "supportsTablet": false,
-      "infoPlist": {
-        "NSMicrophoneUsageDescription": "Aegis uses the microphone to detect distress sounds silently.",
-        "NSLocationWhenInUseUsageDescription": "Aegis sends your location to watchers during an emergency."
-      }
-    },
-    "plugins": [
-      "expo-location",
-      "expo-audio"
-    ],
-    "updates": {
-      "enabled": false
-    }
-  }
-}
