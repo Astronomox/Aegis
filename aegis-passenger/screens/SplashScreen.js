@@ -12,9 +12,9 @@ export default function SplashScreen() {
         style={styles.logo}
         resizeMode="contain"
       />
-      <Text style={styles.tagline}>When speaking is fatal, silence saves lives.</Text>
+      <Text style={styles.tagline}>Your silent safety shield</Text>
       <ActivityIndicator
-        color={COLORS.red}
+        color={COLORS.green}
         size="small"
         style={{ marginTop: SPACING.xl }}
       />
@@ -25,21 +25,21 @@ export default function SplashScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.black,
+    backgroundColor: COLORS.blue,
     justifyContent: 'center',
     alignItems: 'center',
     padding: SPACING.lg,
   },
   logo: {
-    width: 220,
-    height: 80,
-    tintColor: COLORS.white,
+    width: 200,
+    height: 70,
+    tintColor: '#fff',
   },
   tagline: {
-    color: COLORS.lightGray,
-    fontSize: 14,
+    color: 'rgba(255,255,255,0.6)',
+    fontSize: 15,
     marginTop: SPACING.md,
     textAlign: 'center',
-    maxWidth: 260,
+    fontWeight: '500',
   },
 });
