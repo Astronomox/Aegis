@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { Incident } from '@/types';
 import { supabase, MOCK_MODE } from '@/lib/supabase';
@@ -22,7 +22,7 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-export default function DashboardPage() {
+function DashboardPageInner() {
   const isMobile = useIsMobile();
   const passengerName = usePassengerNames();
   const searchParams = useSearchParams();
@@ -295,6 +295,18 @@ export default function DashboardPage() {
         @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.3 } }
       `}</style>
     </>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', color: 'var(--text-muted)', fontSize: 14 }}>
+        Loading...
+      </div>
+    }>
+      <DashboardPageInner />
+    </Suspense>
   );
 }
 
