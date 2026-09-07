@@ -2,16 +2,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { MOCK_MODE } from '@/lib/supabase';
-
-type Mode = 'login' | 'signup';
 
 export default function LoginPage() {
-  const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isSignUp, setIsSignUp] = useState(false);
   const [error, setError] = useState('');
-  const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
@@ -19,217 +15,197 @@ export default function LoginPage() {
     if (!email.trim() || !password.trim()) return;
     setLoading(true);
     setError('');
-    setInfo('');
+
+    const endpoint = isSignUp ? '/api/auth/signup' : '/api/auth/login';
 
     try {
-      if (mode === 'signup') {
-        // Sign up creates the Supabase Auth user, then redirect to login
-        const res = await fetch('/api/auth/signup', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: email.trim(), password }),
-        });
-        const body = await res.json();
-        if (!res.ok) {
-          setError(body.error || 'SIGNUP FAILED');
-        } else {
-          setInfo('Account created. Check your email to confirm, then log in.');
-          setMode('login');
-        }
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim(), password: password.trim() }),
+      });
+
+      if (res.ok) {
+        router.push('/dashboard');
       } else {
-        const res = await fetch('/api/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: email.trim(), password }),
-        });
-        const body = await res.json();
-        if (res.ok) {
-          router.push('/dashboard');
-        } else {
-          setError(body.error || 'ACCESS DENIED');
-        }
+        const data = await res.json().catch(() => ({}));
+        setError(data.error || (isSignUp ? 'Could not create account' : 'Invalid email or password'));
       }
     } catch {
-      setError('CONNECTION FAILED');
+      setError('Connection failed');
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'radial-gradient(ellipse at 50% 50%, #ffffff 0%, #f4f5f7 70%)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      position: 'relative', overflowY: 'auto', padding: '24px 0',
-    }}>
-      {/* Grid */}
-      <div style={{
-        position: 'absolute', inset: 0,
-        backgroundImage: `linear-gradient(rgba(0,0,0,0.025) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(0,0,0,0.025) 1px, transparent 1px)`,
-        backgroundSize: '60px 60px',
-      }} />
+  // Two verified free photos, distinct per mode so login and signup feel
+  // different, not just a copy-pasted screen.
+  const image = isSignUp
+    ? 'https://images.unsplash.com/photo-1776521908392-a68ada9bb47c?w=1200&h=1400&fit=crop'
+    : 'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=1200&h=1400&fit=crop&crop=face';
 
-      {/* Scan line */}
-      <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, height: '1px',
-        background: 'linear-gradient(90deg, transparent, rgba(255,59,59,0.3), transparent)',
-        animation: 'scanline 4s ease-in-out infinite',
-      }} />
+  const badge = isSignUp ? 'Welcome aboard' : 'Welcome back';
+  const quote = isSignUp
+    ? '"Silent protection starts here."'
+    : '"When they\'re okay, you\'re okay."';
 
-      <div style={{
-        position: 'relative', width: '100%', maxWidth: 400,
-        padding: '0 24px', textAlign: 'center',
-      }}>
-        <img src="/aegis-logo.png" alt="AEGIS" style={{ width: 220, height: 'auto', marginBottom: 4 }} />
+  const formPanel = (
+    <div className="auth-form-panel">
+      <div style={{ width: '100%', maxWidth: 380 }}>
+        <img src="/aegis-logo.png" alt="Aegis" style={{ height: 22, marginBottom: 40 }} />
 
-        <div style={{
-          fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 500,
-          color: 'var(--text-muted)', letterSpacing: 4, marginBottom: 40,
+        <h1 style={{
+          fontFamily: 'var(--display)', fontSize: 'clamp(32px, 5vw, 42px)',
+          fontWeight: 800, color: 'var(--blue)', marginBottom: 10, lineHeight: 1.1,
         }}>
-          Watcher Command Interface
+          {isSignUp ? 'Join Aegis' : 'Welcome back'}
+        </h1>
+        <p style={{ fontSize: 14, color: 'var(--text-dim)', marginBottom: 32 }}>
+          {isSignUp
+            ? 'Create your watcher account and start looking out for the people who matter.'
+            : 'Sign in to your watcher dashboard.'}
+        </p>
+
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>
+            Email
+          </label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@example.com"
+            autoFocus
+            style={{
+              width: '100%', padding: '13px 16px', fontSize: 14,
+              background: 'var(--bg)', border: '1.5px solid var(--border)',
+              borderRadius: 'var(--radius-sm)', outline: 'none',
+              color: 'var(--text)', transition: 'border-color 0.2s',
+            }}
+            onFocus={(e) => (e.target.style.borderColor = 'var(--blue)')}
+            onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
+          />
         </div>
 
-        {/* Status dot */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, marginBottom: 28 }}>
-          <div style={{
-            width: 6, height: 6, borderRadius: '50%',
-            background: 'var(--green)', boxShadow: '0 0 8px var(--green)',
-            animation: 'pulse 2s infinite',
-          }} />
-          <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-dim)', letterSpacing: 2 }}>
-            SYSTEM ONLINE
-          </span>
+        <div style={{ marginBottom: isSignUp ? 8 : 12 }}>
+          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>
+            Password
+          </label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
+            placeholder="********"
+            style={{
+              width: '100%', padding: '13px 16px', fontSize: 14,
+              background: 'var(--bg)', border: '1.5px solid var(--border)',
+              borderRadius: 'var(--radius-sm)', outline: 'none',
+              color: 'var(--text)', transition: 'border-color 0.2s',
+            }}
+            onFocus={(e) => (e.target.style.borderColor = 'var(--blue)')}
+            onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
+          />
         </div>
 
-        {/* Mode toggle */}
-        <div style={{
-          display: 'flex', marginBottom: 24,
-          background: 'rgba(0,0,0,0.03)', border: '1px solid var(--glass-border)', borderRadius: 6,
-          overflow: 'hidden',
-        }}>
-          {(['login', 'signup'] as Mode[]).map((m) => (
-            <button
-              key={m}
-              onClick={() => { setMode(m); setError(''); setInfo(''); }}
-              style={{
-                flex: 1, padding: '10px 0',
-                fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, letterSpacing: 2,
-                color: mode === m ? 'var(--red)' : 'var(--text-muted)',
-                background: mode === m ? 'var(--red-dim)' : 'transparent',
-                border: 'none', transition: 'all 0.2s',
-              }}
-            >
-              {m === 'login' ? 'LOG IN' : 'SIGN UP'}
+        {!isSignUp && (
+          <div style={{ textAlign: 'right', marginBottom: 24 }}>
+            <button style={{ background: 'none', border: 'none', fontSize: 13, fontWeight: 700, color: 'var(--blue)' }}>
+              Forgot password?
             </button>
-          ))}
-        </div>
-
-        {MOCK_MODE && (
-          <div style={{
-            marginBottom: 20, padding: '10px 14px',
-            background: 'rgba(37,99,235,0.06)', border: '1px solid rgba(37,99,235,0.15)',
-            borderRadius: 6, fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--blue)',
-            letterSpacing: 1, lineHeight: 1.6, textAlign: 'left',
-          }}>
-            DEMO MODE — use:<br />
-            watcher@aegis.demo / aegis1234
           </div>
         )}
 
-        <input
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-          placeholder="EMAIL ADDRESS"
-          autoFocus
-          style={{
-            width: '100%', marginBottom: 10,
-            background: 'rgba(0,0,0,0.03)', border: '1px solid var(--glass-border)',
-            borderRadius: 4, padding: '13px 16px',
-            fontFamily: 'var(--mono)', fontSize: 13, color: 'var(--text)',
-            letterSpacing: 1, outline: 'none', transition: 'border-color 0.2s',
-          }}
-          onFocus={(e) => (e.target.style.borderColor = 'rgba(217,45,45,0.3)')}
-          onBlur={(e) => (e.target.style.borderColor = 'rgba(0,0,0,0.08)')}
-        />
-
-        <input
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-          placeholder="PASSWORD"
-          style={{
-            width: '100%',
-            background: 'rgba(0,0,0,0.03)', border: '1px solid var(--glass-border)',
-            borderRadius: 4, padding: '13px 16px',
-            fontFamily: 'var(--mono)', fontSize: 13, color: 'var(--text)',
-            letterSpacing: 3, outline: 'none', transition: 'border-color 0.2s',
-          }}
-          onFocus={(e) => (e.target.style.borderColor = 'rgba(217,45,45,0.3)')}
-          onBlur={(e) => (e.target.style.borderColor = 'rgba(0,0,0,0.08)')}
-        />
+        {isSignUp && <div style={{ marginBottom: 24 }} />}
 
         {error && (
-          <div style={{
-            fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--red)',
-            marginTop: 12, letterSpacing: 1, lineHeight: 1.5,
-          }}>{error}</div>
-        )}
-        {info && (
-          <div style={{
-            fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--green)',
-            marginTop: 12, letterSpacing: 1, lineHeight: 1.5,
-          }}>{info}</div>
+          <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--red)', marginBottom: 16 }}>
+            {error}
+          </p>
         )}
 
         <button
           onClick={handleSubmit}
           disabled={loading}
           style={{
-            width: '100%', marginTop: 16, padding: '13px 0',
-            background: loading ? 'rgba(217,45,45,0.1)' : 'rgba(217,45,45,0.1)',
-            border: '1px solid rgba(217,45,45,0.2)',
-            borderRadius: 4, fontFamily: 'var(--mono)', fontSize: 12,
-            fontWeight: 700, color: 'var(--red)', letterSpacing: 3,
-            transition: 'all 0.2s', opacity: loading ? 0.5 : 1,
-          }}
-          onMouseEnter={(e) => {
-            if (!loading) {
-              (e.currentTarget).style.background = 'rgba(217,45,45,0.18)';
-              (e.currentTarget).style.boxShadow = '0 0 20px rgba(217,45,45,0.12)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            (e.currentTarget).style.background = 'rgba(217,45,45,0.1)';
-            (e.currentTarget).style.boxShadow = 'none';
+            width: '100%', padding: '15px 0', fontSize: 15, fontWeight: 700,
+            color: '#fff', background: 'var(--blue)',
+            borderRadius: 'var(--radius-pill)', border: 'none',
+            opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s',
           }}
         >
-          {loading ? 'AUTHENTICATING...' : mode === 'login' ? 'AUTHENTICATE' : 'CREATE ACCOUNT'}
+          {loading
+            ? (isSignUp ? 'Creating account...' : 'Signing in...')
+            : (isSignUp ? 'Create account' : 'Sign in')}
         </button>
 
-        <div style={{
-          fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-muted)',
-          marginTop: 32, letterSpacing: 1,
-        }}>
-          ENCRYPTED CHANNEL · SUPABASE AUTH
-        </div>
-      </div>
+        <p style={{ fontSize: 13, color: 'var(--text-dim)', textAlign: 'center', marginTop: 24 }}>
+          {isSignUp ? 'Already have an account? ' : 'Do not have an account? '}
+          <button
+            onClick={() => { setIsSignUp(!isSignUp); setError(''); }}
+            style={{ background: 'none', border: 'none', color: 'var(--blue)', fontWeight: 700, fontSize: 13 }}
+          >{isSignUp ? 'Sign in' : 'Sign up'}</button>
+        </p>
 
-      <style>{`
-        @keyframes scanline {
-          0%, 100% { transform: translateY(0); opacity: 0; }
-          50% { transform: translateY(100vh); opacity: 1; }
-        }
-        @keyframes pulse {
-          0%, 100% { opacity: 1; }
-          50% { opacity: 0.3; }
-        }
-        input::placeholder { color: rgba(0,0,0,0.22); letter-spacing: 2px; font-size: 10px; }
-      `}</style>
+        <p style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginTop: 20 }}>
+          Demo mode: use watcher@aegis.demo / aegis1234
+        </p>
+      </div>
+    </div>
+  );
+
+  const imagePanel = (
+    <div className="auth-image-panel" style={{
+      backgroundImage: `url(${image})`,
+      backgroundSize: 'cover', backgroundPosition: 'center',
+    }}>
+      <div style={{
+        position: 'absolute', inset: 0,
+        background: 'linear-gradient(180deg, rgba(15,33,103,0.15) 0%, rgba(15,33,103,0.55) 100%)',
+      }} />
+      {/* Vignette mesh: a darkened radial patch behind the cursive heading so
+          it reads clearly regardless of what's underneath in the photo. */}
+      <div style={{
+        position: 'absolute', top: 0, left: 0, right: 0, height: '55%',
+        background: 'radial-gradient(ellipse 90% 100% at 15% 0%, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.25) 45%, transparent 75%)',
+      }} />
+      <div style={{
+        position: 'absolute', top: 36, left: 44, right: 24,
+      }}>
+        <span style={{
+          fontFamily: "'Dancing Script', cursive",
+          fontSize: 'clamp(40px, 6vw, 58px)',
+          fontWeight: 700,
+          color: '#fff',
+          lineHeight: 1.1,
+          textShadow: '0 2px 12px rgba(0,0,0,0.35)',
+          display: 'inline-block',
+        }}>{badge}</span>
+      </div>
+      <div style={{
+        position: 'absolute', bottom: 32, left: 32, right: 32,
+      }}>
+        <p style={{
+          fontFamily: 'var(--display)', fontSize: 20, fontWeight: 700,
+          color: '#fff', fontStyle: 'italic', lineHeight: 1.4,
+        }}>{quote}</p>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ minHeight: '100vh', display: 'flex', flexWrap: 'wrap' }}>
+      {isSignUp ? (
+        <>
+          {imagePanel}
+          {formPanel}
+        </>
+      ) : (
+        <>
+          {formPanel}
+          {imagePanel}
+        </>
+      )}
     </div>
   );
 }
