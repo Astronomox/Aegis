@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Email and password required' }, { status: 400 });
   }
 
-  // Mock mode — accept hardcoded demo credentials
+  // Mock mode: accept hardcoded demo credentials
   if (MOCK_MODE) {
     if (email === MOCK_EMAIL && password === MOCK_PASSWORD) {
       const res = NextResponse.json({ success: true, mock: true });

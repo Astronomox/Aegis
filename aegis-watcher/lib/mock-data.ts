@@ -57,6 +57,6 @@ export const MOCK_USERS: Record<string, string> = {
   'user-001': 'Aisha Bello',
   'user-002': 'Emeka Okafor',
   'user-003': 'Fatima Ibrahim',
-  // Real passenger app sends this hardcoded ID — show a friendly name
+  // Real passenger app sends this hardcoded ID, show a friendly name
   'demo-passenger-001': 'Demo Passenger',
 };
