@@ -22,15 +22,21 @@ export default function LandingPage() {
         borderBottom: '1px solid rgba(0,0,0,0.06)',
       }}>
         <img src="/aegis-logo.png" alt="AEGIS" style={{ height: 20 }} />
-        <button
-          onClick={() => router.push('/login')}
-          style={{
-            fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700,
-            color: 'var(--red)', letterSpacing: 1,
-            background: 'var(--red-dim)', border: '1px solid rgba(217,45,45,0.2)',
-            padding: '9px 18px', borderRadius: 6,
-          }}
-        >WATCHER LOGIN →</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <a href="#pricing" style={{
+            fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 600,
+            color: 'var(--text-dim)', letterSpacing: 1,
+          }}>PRICING</a>
+          <button
+            onClick={() => router.push('/login')}
+            style={{
+              fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700,
+              color: 'var(--red)', letterSpacing: 1,
+              background: 'var(--red-dim)', border: '1px solid rgba(217,45,45,0.2)',
+              padding: '9px 18px', borderRadius: 6,
+            }}
+          >WATCHER LOGIN →</button>
+        </div>
       </nav>
 
       {/* HERO */}
@@ -184,6 +190,149 @@ export default function LandingPage() {
                 background: 'var(--red)', padding: '14px 32px', borderRadius: 8,
               }}
             >OPEN WATCHER DASHBOARD →</button>
+          </div>
+        </div>
+      </section>
+
+      {/* PRICING */}
+      <section id="pricing" style={{
+        padding: '70px 24px',
+        background: '#fff',
+        borderTop: '1px solid rgba(0,0,0,0.06)',
+        borderBottom: '1px solid rgba(0,0,0,0.06)',
+      }}>
+        <div style={{ maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
+          <div style={{
+            display: 'inline-block', fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700,
+            color: 'var(--green)', letterSpacing: 2,
+            background: 'rgba(22,163,74,0.08)', padding: '5px 12px', borderRadius: 20, marginBottom: 16,
+          }}>PRICING</div>
+
+          <h2 style={{ fontSize: 30, fontWeight: 800, marginBottom: 12 }}>
+            Safety shouldn't have a paywall.
+          </h2>
+          <p style={{ fontSize: 15, color: 'var(--text-dim)', lineHeight: 1.6, maxWidth: 520, margin: '0 auto 48px' }}>
+            Aegis is free to use during our launch. Future plans will fund infrastructure
+            costs and a 24/7 response network.
+          </p>
+
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+            gap: 20, maxWidth: 820, margin: '0 auto',
+          }}>
+            {[
+              {
+                name: 'FREE',
+                price: '₦0',
+                period: 'forever',
+                color: 'var(--text)',
+                highlight: false,
+                features: [
+                  'Passenger app',
+                  '1 watcher per passenger',
+                  'Manual SOS trigger',
+                  'Live location to watcher',
+                  'Watcher dashboard',
+                ],
+              },
+              {
+                name: 'PERSONAL',
+                price: '₦1,500',
+                period: 'per month',
+                color: 'var(--red)',
+                highlight: true,
+                features: [
+                  'Everything in Free',
+                  'Up to 5 watchers',
+                  'Audio trigger (mic detection)',
+                  'Audio clip recorded & shared',
+                  'Incident history (30 days)',
+                  'Telegram / SMS alerts',
+                ],
+              },
+              {
+                name: 'FAMILY',
+                price: '₦3,500',
+                period: 'per month',
+                color: 'var(--blue)',
+                highlight: false,
+                features: [
+                  'Everything in Personal',
+                  'Up to 10 passengers',
+                  'Shared family dashboard',
+                  'Unlimited incident history',
+                  'Priority response routing',
+                  'Early access to new features',
+                ],
+              },
+            ].map((plan) => (
+              <div
+                key={plan.name}
+                style={{
+                  padding: 28, borderRadius: 12, textAlign: 'left',
+                  background: plan.highlight ? 'var(--text)' : '#f9fafb',
+                  border: plan.highlight ? 'none' : '1px solid rgba(0,0,0,0.07)',
+                  position: 'relative',
+                }}
+              >
+                {plan.highlight && (
+                  <div style={{
+                    position: 'absolute', top: -1, left: 28,
+                    fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700,
+                    color: '#fff', background: 'var(--red)',
+                    padding: '3px 10px', borderRadius: '0 0 6px 6px', letterSpacing: 1,
+                  }}>MOST POPULAR</div>
+                )}
+                <div style={{
+                  fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700,
+                  color: plan.highlight ? 'rgba(255,255,255,0.5)' : plan.color,
+                  letterSpacing: 2, marginBottom: 12,
+                }}>{plan.name}</div>
+                <div style={{ marginBottom: 4 }}>
+                  <span style={{
+                    fontSize: 32, fontWeight: 900,
+                    color: plan.highlight ? '#fff' : 'var(--text)',
+                  }}>{plan.price}</span>
+                  <span style={{
+                    fontSize: 13, color: plan.highlight ? 'rgba(255,255,255,0.45)' : 'var(--text-muted)',
+                    marginLeft: 6,
+                  }}>{plan.period}</span>
+                </div>
+
+                <div style={{
+                  height: 1, background: plan.highlight ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.07)',
+                  margin: '18px 0',
+                }} />
+
+                <ul style={{ listStyle: 'none', padding: 0, marginBottom: 24 }}>
+                  {plan.features.map((f) => (
+                    <li key={f} style={{
+                      display: 'flex', alignItems: 'flex-start', gap: 8,
+                      fontSize: 13, marginBottom: 8,
+                      color: plan.highlight ? 'rgba(255,255,255,0.8)' : 'var(--text-dim)',
+                    }}>
+                      <span style={{ color: plan.highlight ? 'rgba(255,255,255,0.4)' : 'var(--green)', flexShrink: 0, marginTop: 1 }}>✓</span>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+
+                <button
+                  onClick={() => router.push('/login')}
+                  style={{
+                    width: '100%', padding: '11px 0', borderRadius: 6,
+                    fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, letterSpacing: 1,
+                    background: plan.highlight ? 'var(--red)' : 'transparent',
+                    color: plan.highlight ? '#fff' : 'var(--text)',
+                    border: plan.highlight ? 'none' : '1px solid rgba(0,0,0,0.15)',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  {plan.name === 'FREE' ? 'GET STARTED' : 'COMING SOON'}
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       </section>

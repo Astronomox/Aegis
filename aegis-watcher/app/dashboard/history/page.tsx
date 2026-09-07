@@ -7,6 +7,10 @@ import { supabase, MOCK_MODE } from '@/lib/supabase';
 import { MOCK_INCIDENTS, MOCK_USERS } from '@/lib/mock-data';
 import { useIsMobile } from '@/lib/useIsMobile';
 
+function passengerName(id: string): string {
+  return MOCK_USERS[id] ?? id;
+}
+
 const PAGE_SIZE = 10;
 
 function timeAgo(dateStr: string): string {
@@ -120,7 +124,7 @@ export default function HistoryPage() {
                 }}
               >
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>
-                  {MOCK_MODE ? MOCK_USERS[inc.passenger_id] || inc.passenger_id : inc.passenger_id}
+                  {passengerName(inc.passenger_id)}
                 </div>
                 <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-dim)', marginBottom: 6 }}>
                   {inc.latitude.toFixed(4)}, {inc.longitude.toFixed(4)}
@@ -153,7 +157,7 @@ export default function HistoryPage() {
                 onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
               >
                 <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>
-                  {MOCK_MODE ? MOCK_USERS[inc.passenger_id] || inc.passenger_id : inc.passenger_id}
+                  {passengerName(inc.passenger_id)}
                 </span>
                 <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-dim)' }}>
                   {inc.latitude.toFixed(4)}, {inc.longitude.toFixed(4)}

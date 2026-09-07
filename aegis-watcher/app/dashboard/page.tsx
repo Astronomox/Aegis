@@ -1,13 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import type { Incident } from '@/types';
 import { supabase, MOCK_MODE } from '@/lib/supabase';
-import { MOCK_INCIDENTS, MOCK_USERS } from '@/lib/mock-data';
+import { MOCK_INCIDENTS } from '@/lib/mock-data';
 import IncidentMap from '@/components/IncidentMap';
 import { playAlertSound } from '@/lib/alertSound';
 import { useIsMobile } from '@/lib/useIsMobile';
+import { usePassengerNames } from '@/lib/usePassengerNames';
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -21,6 +22,9 @@ function timeAgo(dateStr: string): string {
 
 export default function DashboardPage() {
   const isMobile = useIsMobile();
+  const passengerName = usePassengerNames();
+  const searchParams = useSearchParams();
+  const filterPassenger = searchParams.get('passenger');
 
   // Clock must be client-only: rendering Date.now() during SSR causes a
   // hydration mismatch since the server and client render at different times.
@@ -43,18 +47,21 @@ export default function DashboardPage() {
   useEffect(() => {
     async function load() {
       if (MOCK_MODE) {
-        setIncidents(MOCK_INCIDENTS);
+        const all = MOCK_INCIDENTS;
+        setIncidents(filterPassenger ? all.filter(i => i.passenger_id === filterPassenger) : all);
         setLoading(false);
         return;
       }
-      const { data, error } = await supabase!
+      let query = supabase!
         .from('incidents').select('*')
         .order('created_at', { ascending: false }).limit(50);
+      if (filterPassenger) query = query.eq('passenger_id', filterPassenger);
+      const { data, error } = await query;
       if (!error && data) setIncidents(data as Incident[]);
       setLoading(false);
     }
     load();
-  }, []);
+  }, [filterPassenger]);
 
   useEffect(() => {
     if (MOCK_MODE || !supabase) return;
@@ -113,7 +120,12 @@ export default function DashboardPage() {
 
   const selectIncident = (id: string) => {
     setSelectedId(id);
-    if (isMobile) setFeedOpen(false); // don't stack two bottom sheets
+    if (isMobile) setFeedOpen(false);
+  };
+
+  const handleLogout = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    router.push('/login');
   };
 
   return (
@@ -187,6 +199,24 @@ export default function DashboardPage() {
                 padding: '5px 12px', borderRadius: 4, transition: 'all 0.2s',
               }}
             >HISTORY</button>
+            <button
+              onClick={() => router.push('/dashboard/passengers')}
+              style={{
+                fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 600,
+                color: 'var(--text-dim)', letterSpacing: 1,
+                background: 'rgba(0,0,0,0.03)', border: '1px solid var(--glass-border)',
+                padding: '5px 12px', borderRadius: 4, transition: 'all 0.2s',
+              }}
+            >PASSENGERS</button>
+            <button
+              onClick={handleLogout}
+              style={{
+                fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 600,
+                color: 'var(--red)', letterSpacing: 1,
+                background: 'var(--red-dim)', border: '1px solid rgba(217,45,45,0.2)',
+                padding: '5px 12px', borderRadius: 4, transition: 'all 0.2s',
+              }}
+            >LOG OUT</button>
           </div>
         )}
       </div>
@@ -227,8 +257,26 @@ export default function DashboardPage() {
               width: '100%', textAlign: 'left', padding: '14px 16px',
               fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 600,
               color: 'var(--text-dim)', letterSpacing: 1, background: 'transparent',
+              borderBottom: '1px solid var(--glass-border)',
             }}
           >📋 VIEW HISTORY</button>
+          <button
+            onClick={() => { setMobileMenuOpen(false); router.push('/dashboard/passengers'); }}
+            style={{
+              width: '100%', textAlign: 'left', padding: '14px 16px',
+              fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 600,
+              color: 'var(--text-dim)', letterSpacing: 1, background: 'transparent',
+              borderBottom: '1px solid var(--glass-border)',
+            }}
+          >👤 PASSENGERS</button>
+          <button
+            onClick={handleLogout}
+            style={{
+              width: '100%', textAlign: 'left', padding: '14px 16px',
+              fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 600,
+              color: 'var(--red)', letterSpacing: 1, background: 'transparent',
+            }}
+          >🔒 LOG OUT</button>
         </div>
       )}
 
@@ -354,7 +402,7 @@ export default function DashboardPage() {
             </div>
 
             {[
-              ['PASSENGER', MOCK_MODE ? MOCK_USERS[selected.passenger_id] || selected.passenger_id : selected.passenger_id],
+              ['PASSENGER', passengerName(selected.passenger_id)],
               ['LATITUDE', selected.latitude.toFixed(6)],
               ['LONGITUDE', selected.longitude.toFixed(6)],
               ['TRIGGER', selected.trigger_type.toUpperCase()],
@@ -548,7 +596,7 @@ function FeedList({
                 </span>
               </div>
               <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
-                {MOCK_MODE ? MOCK_USERS[inc.passenger_id] || inc.passenger_id : inc.passenger_id}
+                {passengerName(inc.passenger_id)}
               </div>
               <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-muted)' }}>
                 {inc.latitude.toFixed(4)}, {inc.longitude.toFixed(4)}
