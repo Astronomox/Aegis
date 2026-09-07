@@ -1,12 +1,6 @@
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-  Linking,
-  Image,
+  View, Text, StyleSheet, TouchableOpacity, Alert, Linking, Image,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as Location from 'expo-location';
@@ -21,21 +15,20 @@ export default function PermissionsScreen({ onGranted }) {
     try {
       const loc = await Location.requestForegroundPermissionsAsync();
       const mic = await AudioModule.requestRecordingPermissionsAsync();
-
       if (loc.granted && mic.granted) {
         onGranted();
       } else {
         Alert.alert(
-          'Permissions Required',
-          'Aegis needs microphone and location access to protect you. Please enable them in Settings.',
+          'Permissions needed',
+          'Aegis needs microphone and location access to keep you safe. Please enable them in Settings.',
           [
             { text: 'Open Settings', onPress: () => Linking.openSettings() },
-            { text: 'Try Again', onPress: requestAll },
+            { text: 'Try again', onPress: requestAll },
           ]
         );
       }
     } catch {
-      Alert.alert('Error', 'Could not request permissions. Try again.');
+      Alert.alert('Something went wrong', 'Could not request permissions. Please try again.');
     } finally {
       setRequesting(false);
     }
@@ -43,7 +36,7 @@ export default function PermissionsScreen({ onGranted }) {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
 
       <Image
         source={require('../assets/aegis-logo.png')}
@@ -51,25 +44,30 @@ export default function PermissionsScreen({ onGranted }) {
         resizeMode="contain"
       />
 
-      <View style={styles.card}>
-        <Text style={styles.heading}>Two permissions needed</Text>
+      <Text style={styles.heading}>Before we start</Text>
+      <Text style={styles.sub}>Aegis needs two permissions to protect you on your journey.</Text>
 
+      <View style={styles.card}>
         <View style={styles.row}>
-          <Text style={styles.icon}>🎙</Text>
+          <View style={styles.iconCircle}>
+            <Text style={styles.iconText}>🎙</Text>
+          </View>
           <View style={styles.rowText}>
             <Text style={styles.permTitle}>Microphone</Text>
             <Text style={styles.permDesc}>
-              Detects distress sounds silently in the background.
+              Detects loud distress sounds in the background so Aegis can alert your watcher automatically.
             </Text>
           </View>
         </View>
 
         <View style={styles.row}>
-          <Text style={styles.icon}>📍</Text>
+          <View style={styles.iconCircle}>
+            <Text style={styles.iconText}>📍</Text>
+          </View>
           <View style={styles.rowText}>
             <Text style={styles.permTitle}>Location</Text>
             <Text style={styles.permDesc}>
-              Sends your coordinates to watchers during an emergency.
+              Sends your coordinates to your watcher when an emergency is triggered.
             </Text>
           </View>
         </View>
@@ -82,13 +80,13 @@ export default function PermissionsScreen({ onGranted }) {
         activeOpacity={0.8}
       >
         <Text style={styles.btnText}>
-          {requesting ? 'Requesting...' : 'Grant Access'}
+          {requesting ? 'Requesting...' : 'Allow permissions'}
         </Text>
       </TouchableOpacity>
 
       <Text style={styles.footer}>
-        Your data never leaves Aegis. We only share your location with your
-        chosen watcher during an active emergency.
+        Your data stays private. We only share your location with your chosen
+        watcher during an active emergency.
       </Text>
     </View>
   );
@@ -97,70 +95,84 @@ export default function PermissionsScreen({ onGranted }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: COLORS.black,
+    backgroundColor: COLORS.white,
     justifyContent: 'center',
     padding: SPACING.lg,
   },
   logo: {
-    width: 180,
-    height: 60,
+    width: 140,
+    height: 48,
     alignSelf: 'center',
     marginBottom: SPACING.xl,
-    tintColor: COLORS.white,
-  },
-  card: {
-    backgroundColor: COLORS.darkGray,
-    borderRadius: 12,
-    padding: SPACING.lg,
-    marginBottom: SPACING.lg,
   },
   heading: {
-    color: COLORS.white,
-    fontSize: 18,
-    fontWeight: '700',
-    marginBottom: SPACING.md,
+    color: COLORS.blue,
+    fontSize: 24,
+    fontWeight: '800',
+    marginBottom: SPACING.sm,
+    textAlign: 'center',
+  },
+  sub: {
+    color: COLORS.textDim,
+    fontSize: 14,
+    textAlign: 'center',
+    marginBottom: SPACING.lg,
+    lineHeight: 20,
+  },
+  card: {
+    backgroundColor: COLORS.card,
+    borderRadius: 16,
+    padding: SPACING.lg,
+    marginBottom: SPACING.lg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   row: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     marginBottom: SPACING.md,
   },
-  icon: {
-    fontSize: 24,
-    marginRight: SPACING.sm,
-    marginTop: 2,
+  iconCircle: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    backgroundColor: COLORS.blueDim,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
+  iconText: { fontSize: 18 },
   rowText: { flex: 1 },
   permTitle: {
-    color: COLORS.white,
+    color: COLORS.text,
     fontSize: 15,
-    fontWeight: '600',
+    fontWeight: '700',
+    marginBottom: 2,
   },
   permDesc: {
-    color: COLORS.lightGray,
+    color: COLORS.textDim,
     fontSize: 13,
-    marginTop: 2,
     lineHeight: 18,
   },
   btn: {
-    backgroundColor: COLORS.red,
-    borderRadius: 10,
+    backgroundColor: COLORS.blue,
+    borderRadius: 100,
     paddingVertical: 16,
     alignItems: 'center',
   },
   btnDisabled: { opacity: 0.5 },
   btnText: {
-    color: COLORS.white,
-    fontSize: 16,
+    color: '#fff',
+    fontSize: 15,
     fontWeight: '700',
   },
   footer: {
-    color: COLORS.lightGray,
+    color: COLORS.textMuted,
     fontSize: 11,
     textAlign: 'center',
     marginTop: SPACING.lg,
     lineHeight: 16,
-    maxWidth: 300,
+    maxWidth: 280,
     alignSelf: 'center',
   },
 });
