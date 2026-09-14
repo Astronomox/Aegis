@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { supabase, MOCK_MODE } from '@/lib/supabase';
 import { useCurrentUser } from '@/lib/useCurrentUser';
 import AppTopBar from '@/components/AppTopBar';
+import AddPassengerModal from '@/components/AddPassengerModal';
 
 interface WatcherRow {
   id: string;
@@ -23,11 +24,11 @@ export default function PassengersPage() {
 
   const [watchers, setWatchers] = useState<WatcherRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [newPassengerId, setNewPassengerId] = useState('');
-  const [newLabel, setNewLabel] = useState('');
+  const [code, setCode] = useState('');
   const [adding, setAdding] = useState(false);
   const [addError, setAddError] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const load = async () => {
     if (MOCK_MODE) {
@@ -36,8 +37,6 @@ export default function PassengersPage() {
       return;
     }
     if (!user) {
-      // No authenticated session: nothing to load, but the page must not
-      // spin forever, show the empty state instead.
       setWatchers([]);
       setLoading(false);
       return;
@@ -56,52 +55,46 @@ export default function PassengersPage() {
     if (!userLoading) load();
   }, [userLoading, user]);
 
-  const handleAdd = async () => {
-    if (!newPassengerId.trim()) {
-      setAddError('Passenger ID is required.');
+  const handleAddWithCode = async () => {
+    const cleanCode = code.trim().toUpperCase();
+    if (!cleanCode) {
+      setAddError('6-digit pairing code is required.');
       return;
     }
+    if (cleanCode.length !== 6) {
+      setAddError('Pairing code must be 6 characters long.');
+      return;
+    }
+
     setAdding(true);
     setAddError('');
 
-    if (MOCK_MODE) {
-      const row: WatcherRow = {
-        id: `w-${Date.now()}`,
-        passenger_id: newPassengerId.trim(),
-        label: newLabel.trim() || null,
-        created_at: new Date().toISOString(),
-      };
-      setWatchers((prev) => [row, ...prev]);
-      setNewPassengerId('');
-      setNewLabel('');
+    try {
+      const response = await fetch('/api/pairing/redeem', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: cleanCode }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to add passenger');
+      }
+
+      if (data.watcher) {
+        setWatchers((prev) => [data.watcher as WatcherRow, ...prev]);
+      } else {
+        await load();
+      }
+
+      setCode('');
       setShowForm(false);
+    } catch (err) {
+      setAddError(err instanceof Error ? err.message : 'Failed to add passenger');
+    } finally {
       setAdding(false);
-      return;
     }
-
-    const { data, error } = await supabase!
-      .from('watchers')
-      .insert({
-        auth_id: user!.id,
-        passenger_id: newPassengerId.trim(),
-        label: newLabel.trim() || null,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      setAddError(
-        error.code === '23505'
-          ? 'You are already watching this passenger.'
-          : error.message
-      );
-    } else if (data) {
-      setWatchers((prev) => [data as WatcherRow, ...prev]);
-      setNewPassengerId('');
-      setNewLabel('');
-      setShowForm(false);
-    }
-    setAdding(false);
   };
 
   const handleRemove = async (id: string) => {
@@ -122,9 +115,7 @@ export default function PassengersPage() {
         <div style={{ marginBottom: 26 }}>
           <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--blue)', marginBottom: 6 }}>My passengers</h1>
           <p style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.6 }}>
-            Manage who you are watching. Add a passenger by their Aegis ID, shown in
-            the app after they complete setup. You will see their incidents on the
-            dashboard in real time.
+            Manage who you are watching. Enter the 6-digit <strong>Adding Code</strong> generated in the passenger's Aegis mobile app to start monitoring them.
           </p>
           {user && (
             <div style={{
@@ -154,45 +145,33 @@ export default function PassengersPage() {
                 background: 'var(--blue-dim)', border: 'none',
                 padding: '7px 16px', borderRadius: 'var(--radius-pill)',
               }}
-            >{showForm ? 'Cancel' : 'Add'}</button>
+            >{showForm ? 'Cancel' : '+ Add Code'}</button>
           </div>
 
           {showForm && (
             <div style={{ padding: 18 }}>
               <div style={{ marginBottom: 14 }}>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', marginBottom: 6 }}>
-                  Passenger ID
+                  6-Digit Pairing / Adding Code
                 </label>
                 <input
                   style={{
-                    width: '100%', padding: '11px 14px', fontSize: 14,
+                    width: '100%', padding: '11px 14px', fontSize: 18, fontWeight: 700,
+                    letterSpacing: 3, textTransform: 'uppercase',
                     background: 'var(--bg)', border: '1.5px solid var(--border)',
                     borderRadius: 'var(--radius-sm)', outline: 'none', color: 'var(--text)',
                   }}
-                  value={newPassengerId}
-                  onChange={(e) => setNewPassengerId(e.target.value)}
-                  placeholder="e.g. demo-passenger-001"
+                  value={code}
+                  maxLength={6}
+                  onChange={(e) => setCode(e.target.value.toUpperCase())}
+                  placeholder="ABC123"
                   onFocus={(e) => (e.target.style.borderColor = 'var(--blue)')}
                   onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
+                  onKeyDown={(e) => e.key === 'Enter' && handleAddWithCode()}
                 />
-              </div>
-              <div style={{ marginBottom: 16 }}>
-                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', marginBottom: 6 }}>
-                  Label (optional)
-                </label>
-                <input
-                  style={{
-                    width: '100%', padding: '11px 14px', fontSize: 14,
-                    background: 'var(--bg)', border: '1.5px solid var(--border)',
-                    borderRadius: 'var(--radius-sm)', outline: 'none', color: 'var(--text)',
-                  }}
-                  value={newLabel}
-                  onChange={(e) => setNewLabel(e.target.value)}
-                  placeholder="e.g. Mum, Ahmed, Sister"
-                  onFocus={(e) => (e.target.style.borderColor = 'var(--blue)')}
-                  onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
-                  onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-                />
+                <span style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4, display: 'block' }}>
+                  Ask the passenger to open their Aegis app and view their Watcher Code.
+                </span>
               </div>
               {addError && (
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--red)', marginBottom: 12 }}>
@@ -200,14 +179,15 @@ export default function PassengersPage() {
                 </div>
               )}
               <button
-                onClick={handleAdd}
-                disabled={adding}
+                onClick={handleAddWithCode}
+                disabled={adding || code.length !== 6}
                 style={{
                   width: '100%', padding: '12px 0', fontSize: 14, fontWeight: 700,
                   color: '#fff', background: 'var(--blue)', border: 'none',
-                  borderRadius: 'var(--radius-sm)', opacity: adding ? 0.6 : 1,
+                  borderRadius: 'var(--radius-sm)', opacity: adding || code.length !== 6 ? 0.6 : 1,
+                  cursor: adding || code.length !== 6 ? 'not-allowed' : 'pointer',
                 }}
-              >{adding ? 'Adding...' : 'Confirm'}</button>
+              >{adding ? 'Redeeming code...' : 'Add Passenger'}</button>
             </div>
           )}
         </div>
@@ -232,7 +212,7 @@ export default function PassengersPage() {
                 No passengers yet
               </div>
               <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                Add a passenger ID above to start watching them.
+                Ask a passenger for their 6-digit adding code to start watching them.
               </div>
             </div>
           ) : (
@@ -279,10 +259,15 @@ export default function PassengersPage() {
         </div>
 
         <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6, padding: '0 4px', marginTop: 16 }}>
-          The passenger's Aegis ID appears in the app after they complete the setup screen.
-          In demo mode the sample ID is <code style={{ background: 'rgba(0,0,0,0.05)', padding: '1px 6px', borderRadius: 4, fontFamily: 'var(--mono)' }}>demo-passenger-001</code>.
+          Passengers can view or generate their 6-digit adding code during onboarding or via the <strong>⚙ Watcher Code</strong> menu on their Aegis app screen.
         </div>
       </div>
+
+      <AddPassengerModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSuccess={() => load()}
+      />
     </div>
   );
 }

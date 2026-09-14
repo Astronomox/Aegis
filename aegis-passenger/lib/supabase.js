@@ -53,3 +53,45 @@ export async function uploadAudio(uri) {
 
   return data.publicUrl;
 }
+
+/**
+ * Generate a random 6-character pairing code string
+ */
+export function generateRandomCode() {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let result = '';
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+}
+
+/**
+ * Create a pairing code for the passenger (for watchers to add them).
+ */
+export async function createPassengerPairingCode(passengerId, passengerName) {
+  const code = generateRandomCode();
+
+  if (MOCK_MODE || !supabase) {
+    console.log('[MOCK] pairing code created:', code, 'for passenger:', passengerId);
+    return { code, expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() };
+  }
+
+  const { data, error } = await supabase
+    .from('pairing_codes')
+    .insert({
+      code,
+      passenger_id: passengerId,
+      passenger_name: passengerName || 'Passenger',
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.log('[supabase] pairing code insert error:', error.message);
+    throw error;
+  }
+
+  return data;
+}
+
