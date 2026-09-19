@@ -13,3 +13,18 @@ export default function SplashScreen() {
         resizeMode="contain"
       />
       <Text style={styles.tagline}>When speaking is fatal, silence saves lives.</Text>
+      <ActivityIndicator
+        color={COLORS.red}
+        size="small"
+        style={{ marginTop: SPACING.xl }}
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.black,
+    justifyContent: 'center',
+    alignItems: 'center',
