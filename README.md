@@ -158,3 +158,6 @@ Setup: see `aegis-backend-handoff.md` → Step 5.
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | watcher | Supabase anon key |
 | `TELEGRAM_BOT_TOKEN` | watcher `.env.local` | For Edge Function config |
 | `TELEGRAM_CHAT_ID` | watcher `.env.local` | For Edge Function config |
+
+Ugo was hereeeeeeeeeeeee
+Hehe
