@@ -126,9 +126,72 @@ begin
   end if;
 end $$;
 
+
 -- ============================================
--- DEMO USER FOR MOCK MODE
+-- 4. TRIPS (Interstate Travel Safety Network)
 -- ============================================
--- Note: This is for reference only. In mock mode, the app uses hardcoded credentials.
--- For production, create real users via Supabase Auth.
--- Demo credentials: watcher@aegis.demo / aegis1234
+create table if not exists trips (
+  id uuid primary key default gen_random_uuid(),
+  passenger_id text not null,
+  passenger_name text not null default 'Passenger',
+  bus_route text not null,
+  vehicle_id text,
+  departure_location text not null,
+  arrival_location text not null,
+  departure_time timestamptz not null default now(),
+  expected_arrival timestamptz not null,
+  actual_arrival timestamptz,
+  status text not null default 'active' check (status in ('active', 'completed', 'alert')),
+  latitude float not null default 6.5244,
+  longitude float not null default 3.3792,
+  emergency_contact text,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_trips_passenger_id on trips(passenger_id);
+create index if not exists idx_trips_status on trips(status);
+create index if not exists idx_trips_created_at on trips(created_at desc);
+
+alter table trips replica identity full;
+
+-- 5. COMPANIES & FLEET VEHICLES (B2B Fleet Management)
+create table if not exists companies (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  contact_email text not null,
+  subscription_plan text not null default 'Starter',
+  created_at timestamptz default now()
+);
+
+create table if not exists fleet_vehicles (
+  id uuid primary key default gen_random_uuid(),
+  company_id uuid references companies(id) on delete cascade,
+  plate_number text not null,
+  driver_name text not null,
+  route text not null,
+  created_at timestamptz default now()
+);
+
+-- Enable Realtime for Trips
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and tablename = 'trips'
+  ) then
+    alter publication supabase_realtime add table trips;
+  end if;
+end $$;
+
+-- Row Level Security Policies
+alter table trips enable row level security;
+alter table companies enable row level security;
+alter table fleet_vehicles enable row level security;
+
+create policy "Trips: Public read" on trips for select using (true);
+create policy "Trips: Public insert" on trips for insert with check (true);
+create policy "Trips: Public update" on trips for update using (true);
+
+create policy "Companies: Public read" on companies for select using (true);
+create policy "Fleet Vehicles: Public read" on fleet_vehicles for select using (true);
+

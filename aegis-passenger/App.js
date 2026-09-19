@@ -6,7 +6,7 @@ import { AudioModule } from 'expo-audio';
 
 import SplashScreen from './screens/SplashScreen';
 import PermissionsScreen from './screens/PermissionsScreen';
-import BlackScreen from './screens/BlackScreen';
+import PassengerMainScreen from './screens/PassengerMainScreen';
 import OnboardingScreen from './screens/OnboardingScreen';
 import { getHasOnboarded, getPassengerId } from './lib/storage';
 
@@ -21,8 +21,7 @@ export default function App() {
   const checkPermissions = useCallback(async () => {
     try {
       const locStatus = await Location.getForegroundPermissionsAsync();
-      const audioStatus = await AudioModule.getRecordingPermissionsAsync();
-      setPermissionsGranted(locStatus.granted && audioStatus.granted);
+      setPermissionsGranted(locStatus.granted);
     } catch {
       setPermissionsGranted(false);
     }
@@ -73,9 +72,9 @@ export default function App() {
             )}
           </Stack.Screen>
         ) : (
-          <Stack.Screen name="BlackScreen">
+          <Stack.Screen name="PassengerMain">
             {(props) => (
-              <BlackScreen
+              <PassengerMainScreen
                 {...props}
                 passengerId={passengerId}
               />
@@ -86,3 +85,4 @@ export default function App() {
     </NavigationContainer>
   );
 }
+

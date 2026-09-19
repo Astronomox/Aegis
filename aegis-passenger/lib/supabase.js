@@ -109,3 +109,26 @@ export async function createPassengerPairingCode(passengerId, passengerName) {
   return data;
 }
 
+/**
+ * Start a safe trip in DB
+ */
+export async function startTrip(payload) {
+  if (MOCK_MODE) {
+    console.log('[MOCK] trip start ->', JSON.stringify(payload, null, 2));
+    return { data: { ...payload, id: 'mock-trip-' + Date.now() }, error: null };
+  }
+  return supabase.from('trips').insert(payload).select().single();
+}
+
+/**
+ * Mark a trip completed or alert in DB
+ */
+export async function updateTripStatus(tripId, status, extra = {}) {
+  if (MOCK_MODE) {
+    console.log('[MOCK] trip update ->', tripId, status, extra);
+    return { data: { id: tripId, status, ...extra }, error: null };
+  }
+  return supabase.from('trips').update({ status, ...extra }).eq('id', tripId);
+}
+
+
