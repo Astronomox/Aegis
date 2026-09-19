@@ -46,3 +46,27 @@ Both apps auto-detect real keys and switch out of mock mode automatically. Resta
 | passenger_id | uuid | FK → users.id |
 | latitude | float | |
 | longitude | float | |
+| trigger_type | text | `'manual'` or `'audio'` |
+| audio_url | text | nullable, from `audio-clips` bucket |
+| status | text | `'active'` or `'resolved'` |
+| created_at | timestamptz | auto |
+
+**users**
+| field | type |
+|---|---|
+| id | uuid |
+| name | text |
+| phone_number | text |
+
+**watchers**
+| field | type |
+|---|---|
+| id | uuid |
+| passenger_id | uuid (FK) |
+| watcher_phone | text |
+
+## 6. Still needed (not built yet)
+- **Telegram alert Edge Function**: should fire on `incidents` INSERT and hit the Telegram Bot API to notify the watcher. Not built yet, but the code snippet is available on request.
+- **Passcode gate route handler** already exists in the Next.js app (`app/api/auth/passcode/route.ts`), and no backend work is needed there since it's self-contained.
+
+Ping the frontend person if the data shape needs to change for any reason, since the mock data and TypeScript types will need matching updates on that side.
