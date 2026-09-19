@@ -5,9 +5,11 @@ import { useRouter } from 'next/navigation';
 import { supabase, MOCK_MODE } from '@/lib/supabase';
 import { useCurrentUser } from '@/lib/useCurrentUser';
 import { MOCK_PASSENGER_PROFILES, MOCK_INCIDENTS, MOCK_TRIPS } from '@/lib/mock-data';
+import { fetchPassengerProfile, savePassengerProfile, getLocalProfiles } from '@/lib/profiles';
 import type { Incident, Trip, PassengerProfile } from '@/types';
 import AppTopBar from '@/components/AppTopBar';
 import AddPassengerModal from '@/components/AddPassengerModal';
+import EditPassengerModal from '@/components/EditPassengerModal';
 
 interface WatcherRow {
   id: string;
@@ -27,6 +29,9 @@ export default function PassengersPage() {
   const { user, loading: userLoading } = useCurrentUser();
 
   const [watchers, setWatchers] = useState<WatcherRow[]>([]);
+  const [profilesMap, setProfilesMap] = useState<Record<string, PassengerProfile>>({});
+  const [editingProfile, setEditingProfile] = useState<PassengerProfile | null>(null);
+
   const [incidents, setIncidents] = useState<Incident[]>(MOCK_INCIDENTS);
   const [trips, setTrips] = useState<Trip[]>(MOCK_TRIPS);
   const [loading, setLoading] = useState(true);
@@ -36,34 +41,66 @@ export default function PassengersPage() {
   const [showForm, setShowForm] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const load = async () => {
-    if (MOCK_MODE || !supabase) {
-      setWatchers(MOCK_WATCHERS);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const [watchRes, incRes, tripRes] = await Promise.all([
-        supabase.from('watchers').select('*').order('created_at', { ascending: false }),
-        supabase.from('incidents').select('*').order('created_at', { ascending: false }),
-        supabase.from('trips').select('*').order('created_at', { ascending: false }),
-      ]);
-
-      if (watchRes.data && watchRes.data.length > 0) {
-        setWatchers(watchRes.data as WatcherRow[]);
-      } else {
-        setWatchers(MOCK_WATCHERS);
+  const saveWatchersState = (updater: (prev: WatcherRow[]) => WatcherRow[]) => {
+    setWatchers((prev) => {
+      const next = updater(prev);
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('aegis_watchers', JSON.stringify(next));
       }
+      return next;
+    });
+  };
 
-      if (incRes.data) setIncidents(incRes.data as Incident[]);
-      if (tripRes.data) setTrips(tripRes.data as Trip[]);
-    } catch (err) {
-      console.error(err);
-      setWatchers(MOCK_WATCHERS);
-    } finally {
-      setLoading(false);
+  const loadProfiles = async (watcherList: WatcherRow[]) => {
+    const map: Record<string, PassengerProfile> = {};
+    await Promise.all(
+      watcherList.map(async (w) => {
+        const p = await fetchPassengerProfile(w.passenger_id);
+        map[w.passenger_id] = p;
+      })
+    );
+    setProfilesMap(map);
+  };
+
+  const load = async () => {
+    let savedWatchers: WatcherRow[] = [];
+    if (typeof window !== 'undefined') {
+      try {
+        const str = localStorage.getItem('aegis_watchers');
+        if (str) savedWatchers = JSON.parse(str);
+      } catch (e) {
+        console.error(e);
+      }
     }
+
+    let currentWatchers: WatcherRow[] = savedWatchers.length > 0 ? savedWatchers : MOCK_WATCHERS;
+
+    if (!MOCK_MODE && supabase) {
+      try {
+        const [watchRes, incRes, tripRes] = await Promise.all([
+          supabase.from('watchers').select('*').order('created_at', { ascending: false }),
+          supabase.from('incidents').select('*').order('created_at', { ascending: false }),
+          supabase.from('trips').select('*').order('created_at', { ascending: false }),
+        ]);
+
+        if (watchRes.data && watchRes.data.length > 0) {
+          const dbWatchers = watchRes.data as WatcherRow[];
+          const merged = [...dbWatchers, ...savedWatchers.filter((s) => !dbWatchers.some((d) => d.id === s.id))];
+          currentWatchers = merged;
+        }
+        if (incRes.data) setIncidents(incRes.data as Incident[]);
+        if (tripRes.data) setTrips(tripRes.data as Trip[]);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+
+    setWatchers(currentWatchers);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('aegis_watchers', JSON.stringify(currentWatchers));
+    }
+    await loadProfiles(currentWatchers);
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -84,6 +121,13 @@ export default function PassengersPage() {
     setAdding(true);
     setAddError('');
 
+    const newWatcher: WatcherRow = {
+      id: `w-${Date.now()}`,
+      passenger_id: `passenger-${cleanCode}`,
+      label: `Passenger (${cleanCode})`,
+      created_at: new Date().toISOString(),
+    };
+
     try {
       const response = await fetch('/api/pairing/redeem', {
         method: 'POST',
@@ -93,58 +137,43 @@ export default function PassengersPage() {
 
       const data = await response.json();
 
-      if (!response.ok) {
-        // Fallback for demo mode
-        const newWatcher: WatcherRow = {
-          id: `w-${Date.now()}`,
-          passenger_id: `passenger-${cleanCode}`,
-          label: `Passenger (${cleanCode})`,
-          created_at: new Date().toISOString(),
-        };
-        setWatchers((prev) => [newWatcher, ...prev]);
-      } else if (data.watcher) {
-        setWatchers((prev) => [data.watcher as WatcherRow, ...prev]);
+      if (response.ok && data.watcher) {
+        const serverWatcher = data.watcher as WatcherRow;
+        saveWatchersState((prev) => [serverWatcher, ...prev.filter((w) => w.passenger_id !== serverWatcher.passenger_id)]);
       } else {
-        await load();
+        saveWatchersState((prev) => [newWatcher, ...prev.filter((w) => w.passenger_id !== newWatcher.passenger_id)]);
       }
-
-      setCode('');
-      setShowForm(false);
     } catch (err) {
-      // Demo fallback
-      const newWatcher: WatcherRow = {
-        id: `w-${Date.now()}`,
-        passenger_id: `passenger-${cleanCode}`,
-        label: `Passenger (${cleanCode})`,
-        created_at: new Date().toISOString(),
-      };
-      setWatchers((prev) => [newWatcher, ...prev]);
+      saveWatchersState((prev) => [newWatcher, ...prev.filter((w) => w.passenger_id !== newWatcher.passenger_id)]);
+    } finally {
       setCode('');
       setShowForm(false);
-    } finally {
       setAdding(false);
+      loadProfiles([newWatcher, ...watchers]);
     }
   };
 
   const handleRemove = async (id: string) => {
-    if (MOCK_MODE || !supabase) {
-      setWatchers((prev) => prev.filter((w) => w.id !== id));
-      return;
+    saveWatchersState((prev) => prev.filter((w) => w.id !== id));
+    if (!MOCK_MODE && supabase) {
+      await supabase.from('watchers').delete().eq('id', id);
     }
-    await supabase.from('watchers').delete().eq('id', id);
-    setWatchers((prev) => prev.filter((w) => w.id !== id));
   };
 
   const getProfile = (passengerId: string): PassengerProfile => {
-    return MOCK_PASSENGER_PROFILES[passengerId] || {
+    if (profilesMap[passengerId]) return profilesMap[passengerId];
+    if (MOCK_PASSENGER_PROFILES[passengerId]) return MOCK_PASSENGER_PROFILES[passengerId];
+
+    const codeLabel = passengerId.replace('passenger-', '');
+    return {
       id: passengerId,
       passenger_id: passengerId,
-      name: passengerId === 'demo-passenger-001' ? 'Demo Passenger' : 'Interstate Passenger',
-      emergency_contact_name: 'Emergency Dispatch Contact',
-      emergency_contact_phone: '+234 803 123 4567',
-      health_conditions: ['Asthma'],
-      disabilities: ['Hearing Impaired'],
-      pairing_code: 'AEG901',
+      name: `Passenger (${codeLabel})`,
+      emergency_contact_name: 'Emergency Contact',
+      emergency_contact_phone: 'Not set',
+      health_conditions: [],
+      disabilities: [],
+      pairing_code: codeLabel,
       created_at: new Date().toISOString(),
     };
   };
@@ -248,7 +277,7 @@ export default function PassengersPage() {
             watchers.map((w) => {
               const profile = getProfile(w.passenger_id);
               const { pIncidents, pTrips } = getTriggers(w.passenger_id);
-              const name = w.label || profile.name;
+              const name = profile.name || w.label || w.passenger_id;
 
               return (
                 <div
@@ -267,6 +296,15 @@ export default function PassengersPage() {
                       </div>
                     </div>
                     <div style={{ display: 'flex', gap: 8 }}>
+                      <button
+                        onClick={() => setEditingProfile(profile)}
+                        style={{
+                          fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-mono)',
+                          color: 'var(--color-ink)', background: 'var(--color-paper)',
+                          border: '1px solid var(--color-rule)',
+                          padding: '7px 12px', borderRadius: 8, cursor: 'pointer',
+                        }}
+                      >✎ Edit Card</button>
                       <button
                         onClick={() => router.push(`/dashboard?passenger=${w.passenger_id}`)}
                         style={{
@@ -295,7 +333,7 @@ export default function PassengersPage() {
                     <div>
                       <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--color-ink-faint)', letterSpacing: 1 }}>EMERGENCY CONTACT</div>
                       <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-ink)', marginTop: 2 }}>
-                        {profile.emergency_contact_phone || '+234 803 123 4567'}
+                        {profile.emergency_contact_phone || 'Not set'}
                       </div>
                       <div style={{ fontSize: 11, color: 'var(--color-ink-muted)' }}>{profile.emergency_contact_name || 'Primary Contact'}</div>
                     </div>
@@ -313,6 +351,12 @@ export default function PassengersPage() {
                             ♿ {d}
                           </span>
                         ))}
+                        {(!profile.health_conditions || profile.health_conditions.length === 0) &&
+                          (!profile.disabilities || profile.disabilities.length === 0) && (
+                            <span style={{ fontSize: 11, color: 'var(--color-ink-muted)', fontStyle: 'italic' }}>
+                              No health / accessibility needs reported
+                            </span>
+                          )}
                       </div>
                     </div>
                   </div>
@@ -393,6 +437,18 @@ export default function PassengersPage() {
         onClose={() => setIsModalOpen(false)}
         onSuccess={() => load()}
       />
+
+      {editingProfile && (
+        <EditPassengerModal
+          isOpen={!!editingProfile}
+          profile={editingProfile}
+          onClose={() => setEditingProfile(null)}
+          onSuccess={(updated) => {
+            setProfilesMap((prev) => ({ ...prev, [updated.passenger_id]: updated }));
+            load();
+          }}
+        />
+      )}
     </div>
   );
 }

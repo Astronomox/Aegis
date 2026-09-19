@@ -34,7 +34,13 @@ import {
   setPassengerId,
 } from '../lib/storage';
 import { getLocationFast } from '../lib/location';
-import { insertIncident, createPassengerPairingCode } from '../lib/supabase';
+import {
+  insertIncident,
+  createPassengerPairingCode,
+  upsertPassengerProfile,
+  fetchPassengerWatchers,
+  deleteWatcher,
+} from '../lib/supabase';
 import { buildSOSMessage, openNativeSMS } from '../lib/sms';
 
 const { width, height } = Dimensions.get('window');
@@ -54,6 +60,10 @@ export default function PassengerMainScreen({ passengerId: initialPassengerId })
   const [selectedHealth, setSelectedHealth] = useState([]);
   const [selectedDisabilities, setSelectedDisabilities] = useState([]);
   const [pairingCode, setPairingCodeState] = useState('');
+
+  // Watchers state
+  const [activeWatchers, setActiveWatchers] = useState([]);
+  const [loadingWatchers, setLoadingWatchers] = useState(false);
 
   // UI state
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -90,23 +100,71 @@ export default function PassengerMainScreen({ passengerId: initialPassengerId })
   };
 
 
+  const loadWatchers = async (pId) => {
+    const targetId = pId || passengerId;
+    if (!targetId) return;
+    try {
+      setLoadingWatchers(true);
+      const { data } = await fetchPassengerWatchers(targetId);
+      if (data) setActiveWatchers(data);
+    } catch (e) {
+      console.log('[loadWatchers error]', e);
+    } finally {
+      setLoadingWatchers(false);
+    }
+  };
+
+  const handleRevokeWatcher = async (watcherId) => {
+    const performRevoke = async () => {
+      try {
+        await deleteWatcher(watcherId, passengerId);
+        setActiveWatchers((prev) => prev.filter((w) => w.id !== watcherId));
+        if (Platform.OS === 'web') {
+          alert('Watcher permission revoked.');
+        } else {
+          Alert.alert('Permission Revoked', 'Watcher access has been removed.');
+        }
+      } catch (e) {
+        Alert.alert('Error', 'Failed to revoke watcher permission');
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (confirm('Are you sure you want to revoke access for this watcher?')) {
+        performRevoke();
+      }
+    } else {
+      Alert.alert(
+        'Revoke Permission',
+        'Are you sure you want to remove this watcher? They will no longer be able to track your trips or receive alerts.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Revoke Access', style: 'destructive', onPress: performRevoke },
+        ]
+      );
+    }
+  };
+
   const loadProfile = async () => {
     try {
-      const [emContact, code] = await Promise.all([
+      const [emContact, code, storedId] = await Promise.all([
         getEmergencyContact(),
         getPairingCode(),
+        getPassengerId(),
       ]);
 
+      const currentId = storedId || passengerId;
       if (emContact && code) {
         setProfileComplete(true);
       }
 
-      // Load the rest async without blocking UI
-      getPassengerName().then(name => name && setPassengerNameState(name));
-      getEmergencyContactName().then(name => name && setEmContactName(name));
-      getHealthConditions().then(health => health.length > 0 && setSelectedHealth(health));
-      getDisabilities().then(d => d.length > 0 && setSelectedDisabilities(d));
-      getPassengerId().then(id => id && setPassengerIdState(id));
+      getPassengerName().then((name) => name && setPassengerNameState(name));
+      getEmergencyContactName().then((name) => name && setEmContactName(name));
+      getHealthConditions().then((health) => health.length > 0 && setSelectedHealth(health));
+      getDisabilities().then((d) => d.length > 0 && setSelectedDisabilities(d));
+      getPassengerId().then((id) => id && setPassengerIdState(id));
+
+      await loadWatchers(currentId);
     } catch (e) {
       console.log('[loadProfile error]', e);
     }
@@ -132,6 +190,16 @@ export default function PassengerMainScreen({ passengerId: initialPassengerId })
         setHealthConditions(selectedHealth),
         setDisabilities(selectedDisabilities),
       ]);
+
+      await upsertPassengerProfile({
+        passenger_id: passengerId,
+        name: passengerName,
+        emergency_contact_name: emergencyContactName,
+        emergency_contact_phone: emergencyContactPhone,
+        health_conditions: selectedHealth,
+        disabilities: selectedDisabilities,
+        pairing_code: pairingCode,
+      });
 
       setProfileComplete(true);
       showProfileCompleteAnimation();
@@ -161,6 +229,17 @@ export default function PassengerMainScreen({ passengerId: initialPassengerId })
       if (result.code) {
         await setPairingCode(result.code);
         setPairingCodeState(result.code);
+
+        await upsertPassengerProfile({
+          passenger_id: passengerId,
+          name: passengerName,
+          emergency_contact_name: emergencyContactName,
+          emergency_contact_phone: emergencyContactPhone,
+          health_conditions: selectedHealth,
+          disabilities: selectedDisabilities,
+          pairing_code: result.code,
+        });
+
         setShowPairingSuccess(true);
         setTimeout(() => setShowPairingSuccess(false), 3000);
       }
@@ -221,15 +300,14 @@ export default function PassengerMainScreen({ passengerId: initialPassengerId })
     }
   };
 
-<<<<<<< Updated upstream
   const ProfileCheckItem = ({ label, value, complete }) => (
     <View style={styles.checkItem}>
-      <View style={[styles.checkBox, passengerName && styles.checkBoxDone]}>
-        {passengerName && <Text style={styles.checkmark}>✓</Text>}
+      <View style={[styles.checkBox, complete && styles.checkBoxDone]}>
+        {complete && <Text style={styles.checkmark}>✓</Text>}
       </View>
       <View style={styles.checkContent}>
-        <Text style={styles.checkLabel}>Name</Text>
-        {passengerName && <Text style={styles.checkValue}>{passengerName}</Text>}
+        <Text style={styles.checkLabel}>{label}</Text>
+        <Text style={styles.checkValue}>{value || 'Not set'}</Text>
       </View>
     </View>
   );
@@ -239,113 +317,8 @@ export default function PassengerMainScreen({ passengerId: initialPassengerId })
       <View style={styles.sosHeader}>
         <Text style={styles.sosTitle}>EMERGENCY SOS</Text>
         <Text style={styles.sosSubtitle}>
-          One tap sends SMS + alerts emergency contact
+          One tap sends SMS + alerts emergency contact & watchers
         </Text>
-=======
-  // On mount: restore active trip state if present
-  useEffect(() => {
-    (async () => {
-      try {
-        let saved = null;
-        if (Platform.OS === 'web' && typeof window !== 'undefined') {
-          const str = localStorage.getItem('aegis_passenger_active_trip');
-          if (str) saved = JSON.parse(str);
-        }
-        if (saved) {
-          setActiveTrip(saved);
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    })();
-  }, []);
-
-  const saveActiveTripState = (trip) => {
-    setActiveTrip(trip);
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      if (trip) {
-        localStorage.setItem('aegis_passenger_active_trip', JSON.stringify(trip));
-      } else {
-        localStorage.removeItem('aegis_passenger_active_trip');
-      }
-    }
-  };
-
-  const handleStartTrip = async () => {
-    setStartingTrip(true);
-    const coords = await getLocationFast();
-
-    const durationSeconds = demoFastTimer ? 30 : selectedRoute.durationMins * 60;
-    const now = new Date();
-    const expectedArrival = new Date(now.getTime() + durationSeconds * 1000);
-
-    const tripData = {
-      passenger_id: passengerId || 'demo-passenger-001',
-      passenger_name: 'Demo Passenger',
-      bus_route: selectedRoute.name,
-      vehicle_id: vehicleId,
-      departure_location: selectedRoute.name.split('➔')[0].trim(),
-      arrival_location: selectedRoute.name.split('➔')[1].trim(),
-      departure_time: now.toISOString(),
-      expected_arrival: expectedArrival.toISOString(),
-      status: 'active',
-      latitude: coords.latitude,
-      longitude: coords.longitude,
-      emergency_contact: emergencyPhone,
-    };
-
-    const res = await startTrip(tripData);
-    saveActiveTripState(res.data || tripData);
-    setTimeLeft(durationSeconds);
-    setStartingTrip(false);
-  };
-
-  const handleCheckOut = async () => {
-    if (!activeTrip) return;
-    setCheckingOut(true);
-    await updateTripStatus(activeTrip.id, 'completed', {
-      actual_arrival: new Date().toISOString(),
-    });
-    saveActiveTripState(null);
-    setCheckingOut(false);
-  };
-
-  const handleAutoAlert = async () => {
-    if (!activeTrip || activeTrip.status === 'alert') return;
-    await updateTripStatus(activeTrip.id, 'alert');
-    const updated = { ...activeTrip, status: 'alert' };
-    saveActiveTripState(updated);
-
-    const coords = await getLocationFast();
-    const message = `AUTO-ALERT: Passenger did not check out! Bus: ${activeTrip.bus_route} (${activeTrip.vehicle_id}). Location: https://maps.google.com/?q=${coords.latitude},${coords.longitude}`;
-    openNativeSMS(emergencyPhone, message);
-  };
-
-
-  const formatTimeLeft = (sec) => {
-    const mins = Math.floor(sec / 60);
-    const secs = sec % 60;
-    const hrs = Math.floor(mins / 60);
-    const remainMins = mins % 60;
-    if (hrs > 0) {
-      return `${hrs}h ${remainMins}m ${secs < 10 ? '0' : ''}${secs}s`;
-    }
-    return `${mins}m ${secs < 10 ? '0' : ''}${secs}s`;
-  };
-
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* HEADER */}
-      <View style={styles.header}>
-        <View style={styles.headerTitleRow}>
-          <Text style={styles.headerBadge}>NIGERIA INTERSTATE</Text>
-          <Text style={styles.headerTitle}>AEGIS</Text>
-        </View>
-        <View style={styles.statusPill}>
-          <View style={styles.statusDot} />
-          <Text style={styles.statusText}>SMS-First Active</Text>
-        </View>
->>>>>>> Stashed changes
       </View>
 
       {!profileComplete && (
@@ -495,11 +468,49 @@ export default function PassengerMainScreen({ passengerId: initialPassengerId })
             )}
           </View>
 
+          {/* ACTIVE WATCHERS & PERMISSION MANAGEMENT */}
+          <View style={[styles.pairingSection, { marginTop: 12 }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+              <Text style={styles.profileSectionTitle}>👁️ Active Watchers ({activeWatchers.length})</Text>
+              <TouchableOpacity onPress={() => loadWatchers(passengerId)}>
+                <Text style={{ fontSize: 12, color: '#F0C3BE', fontWeight: '600' }}>🔄 Refresh</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.pairingDescription}>
+              These fleet operators and contacts can view your safety status. Revoke permission anytime.
+            </Text>
+
+            {activeWatchers.length > 0 ? (
+              activeWatchers.map((watcher) => (
+                <View key={watcher.id} style={styles.watcherRow}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.watcherName}>{watcher.label || watcher.passenger_id || 'Fleet Command Watcher'}</Text>
+                    <Text style={styles.watcherTime}>
+                      Connected: {watcher.created_at ? new Date(watcher.created_at).toLocaleDateString() : 'Active'}
+                    </Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.revokeButton}
+                    onPress={() => handleRevokeWatcher(watcher.id)}
+                  >
+                    <Text style={styles.revokeButtonText}>🚫 Revoke</Text>
+                  </TouchableOpacity>
+                </View>
+              ))
+            ) : (
+              <View style={styles.emptyWatchersBox}>
+                <Text style={{ color: '#D4C5BE', fontSize: 12, fontStyle: 'italic' }}>
+                  No active watchers currently paired. Share your pairing code to pair with fleet command.
+                </Text>
+              </View>
+            )}
+          </View>
+
           <TouchableOpacity
             style={styles.editProfileButton}
             onPress={() => setShowProfileModal(true)}
           >
-            <Text style={styles.editProfileButtonText}>✎ Edit Profile</Text>
+            <Text style={styles.editProfileButtonText}>✎ Edit Profile Card</Text>
           </TouchableOpacity>
         </>
       )}
@@ -1250,5 +1261,46 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#D4C5BE',
     fontWeight: '500',
+  },
+
+  watcherRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#312C51',
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#5A5380',
+  },
+  watcherName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  watcherTime: {
+    fontSize: 11,
+    color: '#9A8FA3',
+    marginTop: 2,
+  },
+  revokeButton: {
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    borderWidth: 1,
+    borderColor: '#EF4444',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  revokeButtonText: {
+    color: '#EF4444',
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  emptyWatchersBox: {
+    padding: 12,
+    backgroundColor: '#312C51',
+    borderRadius: 8,
+    alignItems: 'center',
   },
 });

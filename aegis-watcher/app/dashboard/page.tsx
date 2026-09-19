@@ -4,7 +4,8 @@ import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import type { Incident, Trip, PassengerProfile } from '@/types';
 import { supabase, MOCK_MODE } from '@/lib/supabase';
-import { MOCK_INCIDENTS, MOCK_TRIPS, MOCK_PASSENGER_PROFILES } from '@/lib/mock-data';
+import { MOCK_INCIDENTS, MOCK_TRIPS, MOCK_PASSENGER_PROFILES, MOCK_USERS } from '@/lib/mock-data';
+import { fetchPassengerProfile } from '@/lib/profiles';
 import IncidentMap from '@/components/IncidentMap';
 import { playAlertSound } from '@/lib/alertSound';
 import { useIsMobile } from '@/lib/useIsMobile';
@@ -25,9 +26,33 @@ function DashboardPageInner() {
 
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
+  const [profilesMap, setProfilesMap] = useState<Record<string, PassengerProfile>>({});
   const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState<{ id: string; type: 'incident' | 'trip' } | null>(null);
   const [activeFilter, setActiveFilter] = useState<'all' | 'sos' | 'active_trips' | 'completed'>('all');
+
+  // Context menu state
+  const [contextMenu, setContextMenu] = useState<{
+    x: number;
+    y: number;
+    item: { id: string; type: 'incident' | 'trip'; passenger_id: string };
+  } | null>(null);
+
+  // High Priority Emergency Alert Banner
+  const [alertBanner, setAlertBanner] = useState<{
+    id: string;
+    passenger_id: string;
+    passenger_name: string;
+    latitude: number;
+    longitude: number;
+    trigger_type: string;
+  } | null>(null);
+
+  useEffect(() => {
+    const handleGlobalClick = () => setContextMenu(null);
+    window.addEventListener('click', handleGlobalClick);
+    return () => window.removeEventListener('click', handleGlobalClick);
+  }, []);
 
   useEffect(() => {
     async function loadData() {
@@ -95,6 +120,64 @@ function DashboardPageInner() {
     });
   };
 
+  const getPassengerNameLabel = (passengerId: string): string => {
+    if (!passengerId) return 'Passenger';
+    if (profilesMap[passengerId]?.name) return profilesMap[passengerId].name;
+    if (MOCK_PASSENGER_PROFILES[passengerId]?.name) return MOCK_PASSENGER_PROFILES[passengerId].name;
+    if (MOCK_USERS[passengerId]) return MOCK_USERS[passengerId];
+
+    if (passengerId.startsWith('passenger-') || passengerId.startsWith('p-')) {
+      const code = passengerId.replace(/^passenger-|^p-/, '').toUpperCase();
+      return `Passenger (${code})`;
+    }
+    return `Passenger (${passengerId})`;
+  };
+
+  useEffect(() => {
+    const ids = Array.from(new Set([...incidents.map((i) => i.passenger_id), ...trips.map((t) => t.passenger_id)]));
+    if (ids.length > 0) {
+      Promise.all(ids.map((id) => fetchPassengerProfile(id))).then((results) => {
+        const map: Record<string, PassengerProfile> = {};
+        results.forEach((p) => {
+          if (p) map[p.passenger_id] = p;
+        });
+        setProfilesMap((prev) => ({ ...prev, ...map }));
+      });
+    }
+  }, [incidents, trips]);
+
+  const triggerSOSAlert = (inc: Incident) => {
+    playAlertSound();
+    const name = getPassengerNameLabel(inc.passenger_id);
+    setAlertBanner({
+      id: inc.id,
+      passenger_id: inc.passenger_id,
+      passenger_name: name,
+      latitude: inc.latitude,
+      longitude: inc.longitude,
+      trigger_type: inc.trigger_type || 'manual',
+    });
+  };
+
+  const clearAllAlerts = () => {
+    saveIncidents((prev) => prev.map((i) => ({ ...i, status: 'resolved' as const })));
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem('aegis_incidents');
+    }
+    setContextMenu(null);
+    setAlertBanner(null);
+  };
+
+  const dismissAlert = (id: string, type: 'incident' | 'trip') => {
+    if (type === 'incident') {
+      saveIncidents((prev) => prev.map((i) => (i.id === id ? { ...i, status: 'resolved' } : i)));
+    } else {
+      saveTrips((prev) => prev.map((t) => (t.id === id ? { ...t, status: 'completed' } : t)));
+    }
+    setContextMenu(null);
+    setAlertBanner(null);
+  };
+
   useEffect(() => {
     if (MOCK_MODE || !supabase) return;
     const client = supabase;
@@ -102,8 +185,27 @@ function DashboardPageInner() {
     const channel = client
       .channel('fleet-realtime')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'incidents' }, (payload: { new: Incident }) => {
-        saveIncidents((prev) => [payload.new, ...prev]);
-        playAlertSound();
+        saveIncidents((prev) => {
+          const idx = prev.findIndex(
+            (i) => i.passenger_id === payload.new.passenger_id && i.status === 'active'
+          );
+          if (idx !== -1) {
+            const next = [...prev];
+            next[idx] = { ...next[idx], ...payload.new, created_at: payload.new.created_at || new Date().toISOString() };
+            return next;
+          }
+          return [payload.new, ...prev];
+        });
+        triggerSOSAlert(payload.new);
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'incidents' }, (payload: { new: Incident }) => {
+        saveIncidents((prev) =>
+          prev.map((i) =>
+            i.id === payload.new.id || (i.passenger_id === payload.new.passenger_id && i.status === 'active')
+              ? { ...i, ...payload.new }
+              : i
+          )
+        );
       })
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'trips' }, (payload: { new: Trip }) => {
         saveTrips((prev) => [payload.new, ...prev]);
@@ -119,8 +221,10 @@ function DashboardPageInner() {
   }, []);
 
   const simulateSOSAlert = async () => {
-    const spread = () => (Math.random() - 0.5) * 0.15;
-    const fakeIncident: Incident = {
+    const spread = () => (Math.random() - 0.5) * 0.05;
+    const now = new Date().toISOString();
+
+    let fakeIncident: Incident = {
       id: `sim-sos-${Date.now()}`,
       passenger_id: 'demo-passenger-001',
       latitude: 7.8023 + spread(),
@@ -128,10 +232,26 @@ function DashboardPageInner() {
       trigger_type: 'manual',
       audio_url: null,
       status: 'active',
-      created_at: new Date().toISOString(),
+      created_at: now,
     };
-    saveIncidents((prev) => [fakeIncident, ...prev]);
-    playAlertSound();
+
+    saveIncidents((prev) => {
+      const idx = prev.findIndex((i) => i.passenger_id === 'demo-passenger-001' && i.status === 'active');
+      if (idx !== -1) {
+        const next = [...prev];
+        fakeIncident = {
+          ...next[idx],
+          latitude: 7.8023 + spread(),
+          longitude: 6.7331 + spread(),
+          created_at: now,
+        };
+        next[idx] = fakeIncident;
+        return next;
+      }
+      return [fakeIncident, ...prev];
+    });
+
+    triggerSOSAlert(fakeIncident);
 
     if (supabase) {
       await supabase.from('incidents').insert(fakeIncident);
@@ -202,7 +322,19 @@ function DashboardPageInner() {
     setTrips(MOCK_TRIPS);
   };
 
-  const activeSOS = incidents.filter((i) => i.status === 'active');
+  const activeSOS = incidents
+    .filter((i) => i.status === 'active')
+    .reduce<Incident[]>((acc, current) => {
+      const idx = acc.findIndex((item) => item.passenger_id === current.passenger_id);
+      if (idx === -1) {
+        acc.push(current);
+      } else {
+        if (new Date(current.created_at) >= new Date(acc[idx].created_at)) {
+          acc[idx] = current;
+        }
+      }
+      return acc;
+    }, []);
   const activeTripsList = trips.filter((t) => t.status === 'active');
   const alertTripsList = trips.filter((t) => t.status === 'alert');
   const completedTripsList = trips.filter((t) => t.status === 'completed');
@@ -327,6 +459,16 @@ function DashboardPageInner() {
             <div
               key={inc.id}
               onClick={() => setSelectedItem({ id: inc.id, type: 'incident' })}
+              onContextMenu={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setContextMenu({
+                  x: e.clientX,
+                  y: e.clientY,
+                  item: { id: inc.id, type: 'incident', passenger_id: inc.passenger_id },
+                });
+              }}
+              title="Right click for actions / dismiss"
               style={{
                 background: 'var(--color-danger-dim)', border: '1px solid var(--color-danger)',
                 borderRadius: 'var(--radius-md)', padding: 10, marginBottom: 8, cursor: 'pointer',
@@ -336,7 +478,9 @@ function DashboardPageInner() {
                 <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-danger)', fontFamily: 'var(--font-mono)' }}>SOS DISTRESS</span>
                 <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-faint)' }}>now</span>
               </div>
-              <div style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--color-ink)' }}>{inc.passenger_id}</div>
+              <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--color-ink)' }}>
+                {getPassengerNameLabel(inc.passenger_id)}
+              </div>
               <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--color-ink-muted)', marginTop: 3 }}>
                 {inc.latitude.toFixed(4)}, {inc.longitude.toFixed(4)}
               </div>
@@ -351,6 +495,16 @@ function DashboardPageInner() {
               <div
                 key={trip.id}
                 onClick={() => setSelectedItem({ id: trip.id, type: 'trip' })}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setContextMenu({
+                    x: e.clientX,
+                    y: e.clientY,
+                    item: { id: trip.id, type: 'trip', passenger_id: trip.passenger_id },
+                  });
+                }}
+                title="Right click for actions"
                 style={{
                   background: selectedItem?.id === trip.id ? 'var(--color-paper-hover)' : 'transparent',
                   border: isAlert ? '1px solid var(--color-danger)' : '1px solid var(--color-rule)',
@@ -542,6 +696,169 @@ function DashboardPageInner() {
           fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--color-ink-faint)',
         }}>
           {MOCK_MODE ? 'MOCK' : 'LIVE'} · {clientTime ?? '--:--:--'}
+        </div>
+      )}
+
+      {/* RIGHT-CLICK CONTEXT MENU */}
+      {contextMenu && (
+        <div
+          style={{
+            position: 'fixed',
+            left: Math.min(contextMenu.x, typeof window !== 'undefined' ? window.innerWidth - 240 : contextMenu.x),
+            top: Math.min(contextMenu.y, typeof window !== 'undefined' ? window.innerHeight - 200 : contextMenu.y),
+            zIndex: 1000,
+            background: 'var(--color-paper-raised)',
+            border: '1px solid var(--color-rule)',
+            borderRadius: 'var(--radius-md)',
+            boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+            padding: '6px 0',
+            minWidth: 240,
+            fontFamily: 'var(--font-mono)',
+          }}
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div style={{ padding: '8px 14px', fontSize: 10, fontWeight: 800, color: 'var(--color-accent)', borderBottom: '1px solid var(--color-rule)', letterSpacing: '0.08em' }}>
+            ACTIONS: {getPassengerNameLabel(contextMenu.item.passenger_id).toUpperCase()}
+          </div>
+
+          <button
+            onClick={() => {
+              setSelectedItem({ id: contextMenu.item.id, type: contextMenu.item.type });
+              setContextMenu(null);
+            }}
+            style={{
+              display: 'block', width: '100%', textAlign: 'left', padding: '9px 14px',
+              background: 'none', border: 'none', color: 'var(--color-ink)',
+              fontSize: 'var(--text-xs)', fontWeight: 600, cursor: 'pointer',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-paper-hover)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          >
+            📍 Focus Location on Map
+          </button>
+
+          <button
+            onClick={() => {
+              router.push('/dashboard/passengers');
+              setContextMenu(null);
+            }}
+            style={{
+              display: 'block', width: '100%', textAlign: 'left', padding: '9px 14px',
+              background: 'none', border: 'none', color: 'var(--color-ink)',
+              fontSize: 'var(--text-xs)', fontWeight: 600, cursor: 'pointer',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-paper-hover)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          >
+            📋 View Passenger Mobile Profile
+          </button>
+
+          <button
+            onClick={() => {
+              dismissAlert(contextMenu.item.id, contextMenu.item.type);
+            }}
+            style={{
+              display: 'block', width: '100%', textAlign: 'left', padding: '9px 14px',
+              background: 'none', border: 'none', color: 'var(--color-safe)',
+              fontSize: 'var(--text-xs)', fontWeight: 600, cursor: 'pointer',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-paper-hover)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          >
+            ✅ Resolve / Dismiss Alert
+          </button>
+
+          <div style={{ height: 1, background: 'var(--color-rule)', margin: '4px 0' }} />
+
+          <button
+            onClick={clearAllAlerts}
+            style={{
+              display: 'block', width: '100%', textAlign: 'left', padding: '9px 14px',
+              background: 'none', border: 'none', color: 'var(--color-danger)',
+              fontSize: 'var(--text-xs)', fontWeight: 800, cursor: 'pointer',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-danger-dim)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+          >
+            🧹 Clear All Alerts & Reset Feed
+          </button>
+        </div>
+      )}
+
+      {/* HIGH-PRIORITY EMERGENCY ALERT BANNER */}
+      {alertBanner && (
+        <div
+          style={{
+            position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)',
+            zIndex: 999, width: '90%', maxWidth: 560,
+            background: '#7F1D1D', border: '2px solid #EF4444',
+            borderRadius: 'var(--radius-lg)', boxShadow: '0 12px 40px rgba(239,68,68,0.5)',
+            padding: 16, color: '#FFFFFF',
+          }}
+        >
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 28, animation: 'pulse 1s infinite' }}>🚨</span>
+              <div>
+                <div style={{ fontSize: 'var(--text-xs)', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#FCA5A5', letterSpacing: '0.1em' }}>
+                  IMPORTANT DISTRESS SOS ALERT
+                </div>
+                <div style={{ fontSize: 'var(--text-lg)', fontWeight: 800, marginTop: 2 }}>
+                  {alertBanner.passenger_name}
+                </div>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setAlertBanner(null)}
+              style={{ background: 'none', border: 'none', color: '#FCA5A5', fontSize: 22, cursor: 'pointer', padding: 4 }}
+            >
+              ×
+            </button>
+          </div>
+
+          <div style={{ fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', color: '#FECACA', marginTop: 8 }}>
+            GPS: {alertBanner.latitude.toFixed(4)}, {alertBanner.longitude.toFixed(4)} · Trigger: {alertBanner.trigger_type === 'audio' ? 'Decibel Spike Warning' : 'Manual SOS Panic Button'}
+          </div>
+
+          <div style={{ display: 'flex', gap: 10, marginTop: 12 }}>
+            <button
+              onClick={() => {
+                setSelectedItem({ id: alertBanner.id, type: 'incident' });
+                setAlertBanner(null);
+              }}
+              style={{
+                flex: 1, padding: '9px 0', background: '#EF4444', color: '#fff',
+                border: 'none', borderRadius: 'var(--radius-sm)',
+                fontSize: 'var(--text-xs)', fontWeight: 700, fontFamily: 'var(--font-mono)', cursor: 'pointer',
+              }}
+            >
+              📍 Track on Map
+            </button>
+            <button
+              onClick={() => {
+                router.push('/dashboard/passengers');
+                setAlertBanner(null);
+              }}
+              style={{
+                flex: 1, padding: '9px 0', background: 'rgba(255,255,255,0.15)', color: '#fff',
+                border: '1px solid rgba(255,255,255,0.3)', borderRadius: 'var(--radius-sm)',
+                fontSize: 'var(--text-xs)', fontWeight: 700, fontFamily: 'var(--font-mono)', cursor: 'pointer',
+              }}
+            >
+              📋 Passenger Profile
+            </button>
+            <button
+              onClick={clearAllAlerts}
+              style={{
+                padding: '9px 14px', background: 'transparent', color: '#FCA5A5',
+                border: '1px solid #EF4444', borderRadius: 'var(--radius-sm)',
+                fontSize: 'var(--text-xs)', fontWeight: 700, fontFamily: 'var(--font-mono)', cursor: 'pointer',
+              }}
+            >
+              🧹 Clear All
+            </button>
+          </div>
         </div>
       )}
     </div>

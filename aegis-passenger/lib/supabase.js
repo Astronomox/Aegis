@@ -131,4 +131,101 @@ export async function updateTripStatus(tripId, status, extra = {}) {
   return supabase.from('trips').update({ status, ...extra }).eq('id', tripId);
 }
 
+/**
+ * Upsert passenger profile data (name, emergency contact, health, disabilities)
+ */
+export async function upsertPassengerProfile(profileData) {
+  if (MOCK_MODE || !supabase) {
+    console.log('[MOCK] passenger profile upsert ->', profileData);
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = JSON.parse(localStorage.getItem('aegis_passenger_profiles') || '{}');
+        stored[profileData.passenger_id] = { ...stored[profileData.passenger_id], ...profileData };
+        localStorage.setItem('aegis_passenger_profiles', JSON.stringify(stored));
+      } catch (e) {}
+    }
+    return { data: profileData, error: null };
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('passenger_profiles')
+      .upsert(profileData, { onConflict: 'passenger_id' })
+      .select()
+      .single();
+
+    if (error) {
+      console.log('[supabase] profile upsert notice:', error.message);
+    }
+    return { data, error };
+  } catch (err) {
+    console.log('[supabase] profile upsert catch:', err);
+    return { data: profileData, error: null };
+  }
+}
+
+/**
+ * Fetch active watchers monitoring a passenger
+ */
+export async function fetchPassengerWatchers(passengerId) {
+  const defaultWatchers = [
+    { id: 'w-001', label: 'God Is Good Motors (GIGM) Dispatch', created_at: new Date().toISOString() },
+    { id: 'w-002', label: 'Emergency Contact Watcher', created_at: new Date().toISOString() },
+  ];
+
+  if (MOCK_MODE || !supabase) {
+    let list = defaultWatchers;
+    if (typeof window !== 'undefined') {
+      try {
+        const custom = localStorage.getItem(`aegis_watchers_${passengerId}`);
+        if (custom) list = JSON.parse(custom);
+      } catch (e) {}
+    }
+    return { data: list, error: null };
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from('watchers')
+      .select('*')
+      .eq('passenger_id', passengerId)
+      .order('created_at', { ascending: false });
+
+    if (!data || data.length === 0) {
+      return { data: defaultWatchers, error: null };
+    }
+    return { data, error: null };
+  } catch (err) {
+    return { data: defaultWatchers, error: null };
+  }
+}
+
+/**
+ * Revoke/delete a watcher for a passenger
+ */
+export async function deleteWatcher(watcherId, passengerId) {
+  if (MOCK_MODE || !supabase) {
+    console.log('[MOCK] watcher delete ->', watcherId);
+    if (typeof window !== 'undefined') {
+      try {
+        const currentStr = localStorage.getItem(`aegis_watchers_${passengerId}`);
+        const current = currentStr ? JSON.parse(currentStr) : [
+          { id: 'w-001', label: 'God Is Good Motors (GIGM) Dispatch', created_at: new Date().toISOString() },
+          { id: 'w-002', label: 'Emergency Contact Watcher', created_at: new Date().toISOString() },
+        ];
+        const updated = current.filter((w) => w.id !== watcherId);
+        localStorage.setItem(`aegis_watchers_${passengerId}`, JSON.stringify(updated));
+      } catch (e) {}
+    }
+    return { error: null };
+  }
+
+  try {
+    const { error } = await supabase.from('watchers').delete().eq('id', watcherId);
+    return { error };
+  } catch (err) {
+    return { error: null };
+  }
+}
+
 

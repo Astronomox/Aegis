@@ -70,10 +70,28 @@ begin
   end if;
 end $$;
 
+-- 4. PASSENGER PROFILES (dynamic mobile profile & medical needs)
+create table if not exists passenger_profiles (
+  id uuid primary key default gen_random_uuid(),
+  passenger_id text not null unique check (char_length(passenger_id) >= 1),
+  name text not null,
+  emergency_contact_name text,
+  emergency_contact_phone text,
+  health_conditions text[],
+  disabilities text[],
+  pairing_code text,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- Index for passenger profiles
+create index if not exists idx_passenger_profiles_passenger_id on passenger_profiles(passenger_id);
+
 -- Disable RLS completely for demo
 alter table incidents disable row level security;
 alter table watchers disable row level security;
 alter table pairing_codes disable row level security;
+alter table passenger_profiles disable row level security;
 
 
 
