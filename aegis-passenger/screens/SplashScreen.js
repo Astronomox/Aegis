@@ -28,3 +28,18 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.black,
     justifyContent: 'center',
     alignItems: 'center',
+    padding: SPACING.lg,
+  },
+  logo: {
+    width: 220,
+    height: 80,
+    tintColor: COLORS.white,
+  },
+  tagline: {
+    color: COLORS.lightGray,
+    fontSize: 14,
+    marginTop: SPACING.md,
+    textAlign: 'center',
+    maxWidth: 260,
+  },
+});
