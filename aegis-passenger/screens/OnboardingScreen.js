@@ -5,39 +5,47 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { COLORS, SPACING } from '../lib/theme';
-import { MOCK_MODE, supabase } from '../lib/supabase';
+import { createPassengerPairingCode, MOCK_MODE } from '../lib/supabase';
+import { setPassengerId, setPassengerName, setPairingCode, setHasOnboarded } from '../lib/storage';
 
 export default function OnboardingScreen({ onComplete }) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [watcherPhone, setWatcherPhone] = useState('');
   const [saving, setSaving] = useState(false);
+  const [generatedCode, setGeneratedCode] = useState(null);
+  const [activePassengerId, setActivePassengerId] = useState(null);
 
   const handleSave = async () => {
-    if (!name.trim() || !phone.trim() || !watcherPhone.trim()) {
-      Alert.alert('Missing info', 'Please fill in all fields to continue.');
+    if (!name.trim() || !phone.trim()) {
+      Alert.alert('Missing info', 'Please enter your name and phone number.');
       return;
     }
+
     setSaving(true);
+
     try {
-      if (MOCK_MODE) {
-        console.log('[MOCK] onboarding save:', { name, phone, watcherPhone });
-        await new Promise((r) => setTimeout(r, 400));
-      } else {
-        const { data: user, error: userErr } = await supabase
-          .from('users').insert({ name: name.trim(), phone_number: phone.trim() })
-          .select().single();
-        if (userErr) throw userErr;
-        const { error: watcherErr } = await supabase
-          .from('watchers').insert({ passenger_id: user.id, watcher_phone: watcherPhone.trim() });
-        if (watcherErr) throw watcherErr;
-      }
-      onComplete();
+      const passengerId = `p-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 6)}`;
+      await setPassengerId(passengerId);
+      await setPassengerName(name.trim());
+      setActivePassengerId(passengerId);
+
+      // Generate initial 6-digit pairing code
+      const codeData = await createPassengerPairingCode(passengerId, name.trim());
+      const code = codeData?.code || 'AEGIS1';
+      await setPairingCode(code);
+      setGeneratedCode(code);
     } catch (e) {
-      Alert.alert('Error', e.message || 'Could not save. Please try again.');
+      console.log('[Onboarding] Error:', e.message);
+      Alert.alert('Error', e.message || 'Could not create pairing code. Please try again.');
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleFinish = async () => {
+    await setHasOnboarded();
+    onComplete(activePassengerId);
   };
 
   return (
@@ -53,57 +61,81 @@ export default function OnboardingScreen({ onComplete }) {
         resizeMode="contain"
       />
 
-      <Text style={styles.heading}>Set up your shield</Text>
-      <Text style={styles.sub}>
-        Enter your info and your emergency contact. This person will be alerted
-        if you trigger an SOS.
-      </Text>
+      {generatedCode ? (
+        <View style={styles.codeStep}>
+          <Text style={styles.heading}>Your Adding Code</Text>
+          <Text style={styles.sub}>
+            Share this 6-digit code with your emergency contact / watcher. They will enter it on their Aegis Web Dashboard to monitor your trip.
+          </Text>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Your name</Text>
-        <TextInput
-          style={styles.input}
-          value={name}
-          onChangeText={setName}
-          placeholder="e.g. Amina"
-          placeholderTextColor={COLORS.textMuted}
-        />
-      </View>
+          <View style={styles.codeCard}>
+            <Text style={styles.codeLabel}>PASSENGER ADDING CODE</Text>
+            <Text style={styles.codeText}>{generatedCode}</Text>
+            <Text style={styles.codeSubtext}>Valid for 24 hours · One-time pairing</Text>
+          </View>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Your phone number</Text>
-        <TextInput
-          style={styles.input}
-          value={phone}
-          onChangeText={setPhone}
-          placeholder="+234 801 234 5678"
-          placeholderTextColor={COLORS.textMuted}
-          keyboardType="phone-pad"
-        />
-      </View>
+          <TouchableOpacity
+            style={styles.btn}
+            onPress={handleFinish}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.btnText}>Start Travel Shield</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <View style={styles.formStep}>
+          <Text style={styles.heading}>Set up your shield</Text>
+          <Text style={styles.sub}>
+            Enter your details to generate your Aegis adding code for your watchers.
+          </Text>
 
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Watcher's phone number</Text>
-        <TextInput
-          style={styles.input}
-          value={watcherPhone}
-          onChangeText={setWatcherPhone}
-          placeholder="+234 901 234 5678"
-          placeholderTextColor={COLORS.textMuted}
-          keyboardType="phone-pad"
-        />
-      </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Your name</Text>
+            <TextInput
+              style={styles.input}
+              value={name}
+              onChangeText={setName}
+              placeholder="e.g. Amina"
+              placeholderTextColor={COLORS.textMuted}
+            />
+          </View>
 
-      <TouchableOpacity
-        style={[styles.btn, saving && styles.btnDisabled]}
-        onPress={handleSave}
-        disabled={saving}
-        activeOpacity={0.8}
-      >
-        <Text style={styles.btnText}>
-          {saving ? 'Setting up...' : 'Activate Aegis'}
-        </Text>
-      </TouchableOpacity>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Your phone number</Text>
+            <TextInput
+              style={styles.input}
+              value={phone}
+              onChangeText={setPhone}
+              placeholder="+234 801 234 5678"
+              placeholderTextColor={COLORS.textMuted}
+              keyboardType="phone-pad"
+            />
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Watcher's phone number (optional)</Text>
+            <TextInput
+              style={styles.input}
+              value={watcherPhone}
+              onChangeText={setWatcherPhone}
+              placeholder="+234 901 234 5678"
+              placeholderTextColor={COLORS.textMuted}
+              keyboardType="phone-pad"
+            />
+          </View>
+
+          <TouchableOpacity
+            style={[styles.btn, saving && styles.btnDisabled]}
+            onPress={handleSave}
+            disabled={saving}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.btnText}>
+              {saving ? 'Generating Code...' : 'Generate Adding Code'}
+            </Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }
@@ -121,17 +153,21 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginBottom: SPACING.xl,
   },
+  formStep: { width: '100%' },
+  codeStep: { width: '100%', alignItems: 'center' },
   heading: {
     color: COLORS.blue,
     fontSize: 24,
     fontWeight: '800',
     marginBottom: SPACING.sm,
+    textAlign: 'center',
   },
   sub: {
     color: COLORS.textDim,
     fontSize: 14,
     lineHeight: 20,
     marginBottom: SPACING.lg,
+    textAlign: 'center',
   },
   inputGroup: {
     marginBottom: SPACING.md,
@@ -152,11 +188,41 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: COLORS.border,
   },
+  codeCard: {
+    backgroundColor: COLORS.card,
+    borderWidth: 2,
+    borderColor: COLORS.blue,
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    width: '100%',
+    marginVertical: SPACING.md,
+  },
+  codeLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: COLORS.textDim,
+    letterSpacing: 1.5,
+    marginBottom: 8,
+  },
+  codeText: {
+    fontSize: 36,
+    fontWeight: '900',
+    color: COLORS.blue,
+    letterSpacing: 4,
+    marginVertical: 4,
+  },
+  codeSubtext: {
+    fontSize: 12,
+    color: COLORS.textMuted,
+    marginTop: 8,
+  },
   btn: {
     backgroundColor: COLORS.blue,
     borderRadius: 100,
     paddingVertical: 16,
     alignItems: 'center',
+    width: '100%',
     marginTop: SPACING.lg,
   },
   btnDisabled: { opacity: 0.5 },

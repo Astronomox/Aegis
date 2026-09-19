@@ -5,6 +5,9 @@ import {
   Text,
   StyleSheet,
   Animated,
+  Modal,
+  TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as Haptics from 'expo-haptics';
@@ -14,14 +17,13 @@ import {
   RecordingPresets,
   setAudioModeAsync,
 } from 'expo-audio';
-import { insertIncident, uploadAudio, MOCK_MODE } from '../lib/supabase';
+import { insertIncident, uploadAudio, createPassengerPairingCode, MOCK_MODE } from '../lib/supabase';
+import { getPairingCode, getPassengerName, setPairingCode } from '../lib/storage';
 import { getLocation } from '../lib/location';
 import { requestAudioPermission } from '../lib/audio';
 import { COLORS } from '../lib/theme';
 
-// Fallback used only in mock mode or if passengerId is somehow missing
 const FALLBACK_PASSENGER_ID = 'demo-passenger-001';
-
 const RMS_THRESHOLD = 85;
 
 const STATUS = {
@@ -35,6 +37,11 @@ export default function BlackScreen({ passengerId }) {
   const activePassengerId = passengerId || FALLBACK_PASSENGER_ID;
 
   const [status, setStatus] = useState(STATUS.LISTENING);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [pairingCodeStr, setPairingCodeStr] = useState('');
+  const [passengerNameStr, setPassengerNameStr] = useState('');
+  const [generatingCode, setGeneratingCode] = useState(false);
+
   const tapCountRef = useRef(0);
   const tapTimerRef = useRef(null);
   const overlayOpacity = useRef(new Animated.Value(0)).current;
@@ -45,6 +52,16 @@ export default function BlackScreen({ passengerId }) {
     isMeteringEnabled: true,
   });
   const recorderState = useAudioRecorderState(audioRecorder, 500);
+
+  // Load existing pairing code & name on mount
+  useEffect(() => {
+    (async () => {
+      const storedCode = await getPairingCode();
+      const storedName = await getPassengerName();
+      if (storedCode) setPairingCodeStr(storedCode);
+      if (storedName) setPassengerNameStr(storedName);
+    })();
+  }, []);
 
   // Start recording on mount
   useEffect(() => {
@@ -154,6 +171,20 @@ export default function BlackScreen({ passengerId }) {
     }, 600);
   };
 
+  const handleGenerateNewCode = async () => {
+    setGeneratingCode(true);
+    try {
+      const codeData = await createPassengerPairingCode(activePassengerId, passengerNameStr || 'Passenger');
+      const code = codeData?.code || 'AEGIS1';
+      await setPairingCode(code);
+      setPairingCodeStr(code);
+    } catch (e) {
+      console.log('[BlackScreen] Code generation error:', e.message);
+    } finally {
+      setGeneratingCode(false);
+    }
+  };
+
   const overlayColor =
     status === STATUS.SENDING ? COLORS.red
     : status === STATUS.SENT   ? COLORS.green
@@ -171,6 +202,15 @@ export default function BlackScreen({ passengerId }) {
       <View style={styles.screen}>
         <StatusBar hidden />
 
+        {/* Subtle Watcher Pairing Code Button (Top Right) */}
+        <TouchableOpacity
+          style={styles.pairButton}
+          onPress={() => setModalVisible(true)}
+          activeOpacity={0.6}
+        >
+          <Text style={styles.pairButtonText}>⚙ Watcher Code</Text>
+        </TouchableOpacity>
+
         <Animated.View
           style={[styles.overlay, { opacity: overlayOpacity, backgroundColor: overlayColor }]}
           pointerEvents="none"
@@ -178,10 +218,58 @@ export default function BlackScreen({ passengerId }) {
           <Text style={styles.overlayText}>{overlayText}</Text>
         </Animated.View>
 
-        {/* Tiny debug dot — invisible in real use */}
+        {/* Tiny debug dot */}
         <Text style={styles.debug}>
           {MOCK_MODE ? 'M' : 'L'} · {status === STATUS.LISTENING ? '◉' : '⏳'}
         </Text>
+
+        {/* Pairing Code Modal */}
+        <Modal
+          visible={modalVisible}
+          animationType="slide"
+          transparent={true}
+          onRequestClose={() => setModalVisible(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalCard}>
+              <Text style={styles.modalTitle}>Passenger Pairing Code</Text>
+              <Text style={styles.modalSub}>
+                Give this 6-digit code to your watcher to let them add you on the Aegis Dashboard.
+              </Text>
+
+              <View style={styles.codeContainer}>
+                <Text style={styles.codeTitle}>YOUR ADDING CODE</Text>
+                <Text style={styles.codeVal}>
+                  {pairingCodeStr || '------'}
+                </Text>
+              </View>
+
+              <View style={styles.infoRow}>
+                <Text style={styles.infoLabel}>Passenger ID:</Text>
+                <Text style={styles.infoVal}>{activePassengerId}</Text>
+              </View>
+
+              <TouchableOpacity
+                style={styles.genBtn}
+                onPress={handleGenerateNewCode}
+                disabled={generatingCode}
+              >
+                {generatingCode ? (
+                  <ActivityIndicator color="#fff" size="small" />
+                ) : (
+                  <Text style={styles.genBtnText}>Generate New Code</Text>
+                )}
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.closeBtn}
+                onPress={() => setModalVisible(false)}
+              >
+                <Text style={styles.closeBtnText}>Return to Black Screen</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
       </View>
     </Pressable>
   );
@@ -201,11 +289,113 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 1,
   },
+  pairButton: {
+    position: 'absolute',
+    top: 40,
+    right: 16,
+    zIndex: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  pairButtonText: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 11,
+    fontWeight: '600',
+  },
   debug: {
     position: 'absolute',
     bottom: 6,
     right: 8,
     color: '#111111',
     fontSize: 9,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  modalCard: {
+    backgroundColor: '#1E293B',
+    borderRadius: 20,
+    padding: 24,
+    alignItems: 'center',
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  modalSub: {
+    fontSize: 13,
+    color: '#94A3B8',
+    textAlign: 'center',
+    marginBottom: 20,
+    lineHeight: 18,
+  },
+  codeContainer: {
+    backgroundColor: '#0F172A',
+    borderColor: '#38BDF8',
+    borderWidth: 2,
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    width: '100%',
+    marginBottom: 16,
+  },
+  codeTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#94A3B8',
+    letterSpacing: 1.5,
+    marginBottom: 6,
+  },
+  codeVal: {
+    fontSize: 34,
+    fontWeight: '900',
+    color: '#38BDF8',
+    letterSpacing: 4,
+  },
+  infoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  infoLabel: {
+    fontSize: 12,
+    color: '#64748B',
+    marginRight: 6,
+  },
+  infoVal: {
+    fontSize: 12,
+    color: '#CBD5E1',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  genBtn: {
+    backgroundColor: '#0284C7',
+    paddingVertical: 14,
+    borderRadius: 12,
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  genBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+  closeBtn: {
+    paddingVertical: 12,
+    width: '100%',
+    alignItems: 'center',
+  },
+  closeBtnText: {
+    color: '#94A3B8',
+    fontSize: 13,
+    fontWeight: '600',
   },
 });

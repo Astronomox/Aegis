@@ -4,6 +4,16 @@ Both apps are fully wired — just provision Supabase, drop in the keys, and the
 
 ---
 
+## Demo Mode Credentials
+
+For development without Supabase setup, use these demo credentials:
+- **Email**: `watcher@aegis.demo`
+- **Password**: `aegis1234`
+
+The apps automatically detect missing Supabase credentials and switch to mock mode.
+
+---
+
 ## Step 1 — Create the Supabase project
 
 1. Go to [supabase.com](https://supabase.com) → New Project → name it `aegis`
@@ -14,7 +24,7 @@ Both apps are fully wired — just provision Supabase, drop in the keys, and the
 
 ## Step 2 — Run the schema
 
-Paste the entire contents of `aegis-schema.sql` into the Supabase **SQL Editor** and click Run.
+Paste the entire contents of `sql/aegis-schema.sql` into the Supabase **SQL Editor** and click Run.
 
 This creates:
 - `users` table (passengers — not required for the demo but kept for future use)
@@ -129,3 +139,41 @@ That's it. Every distress signal from the passenger app now pings Telegram insta
 - [ ] Restarted both dev servers
 - [ ] (Optional) Deployed `notify-watcher` Edge Function
 - [ ] (Optional) Created Database Webhook pointing to `notify-watcher`
+
+---
+
+## Production Security Improvements
+
+The backend now includes several production-ready security features:
+
+### Database Security
+- **Row Level Security (RLS)**: Proper policies for users, watchers, and incidents
+- **Input Validation**: Database-level constraints on all fields
+- **Performance Indexes**: Optimized queries for common access patterns
+- **Foreign Key Constraints**: Data integrity with cascade deletes
+
+### API Security
+- **Rate Limiting**: 
+  - Login: 5 attempts per 15 minutes per IP
+  - Signup: 3 attempts per hour per IP
+- **Input Validation**: Email format, password strength, type checking
+- **Session Management**: 
+  - Access tokens: 1 hour expiry
+  - Refresh tokens: 7 day expiry
+  - Secure httpOnly cookies
+
+### Monitoring & Logging
+- **Structured Logging**: Centralized logger for all operations
+- **Error Tracking**: Automatic error logging with context
+- **Auth Event Tracking**: Login, signup, logout events logged
+
+### Environment Validation
+- **Startup Validation**: Checks required environment variables
+- **Mock Mode Detection**: Automatic fallback when credentials missing
+- **Type Safety**: TypeScript strict mode throughout
+
+### Deployment Notes
+- Rate limiting uses in-memory storage (use Redis for production)
+- Error tracking ready for Sentry/DataDog integration
+- Session refresh endpoint should be added for token rotation
+- Consider adding API key authentication for mobile apps

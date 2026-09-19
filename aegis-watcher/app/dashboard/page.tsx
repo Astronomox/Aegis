@@ -11,6 +11,7 @@ import { useIsMobile } from '@/lib/useIsMobile';
 import { usePassengerNames } from '@/lib/usePassengerNames';
 import { CloseIcon, ShieldIcon } from '@/components/icons/Icons';
 import AppTopBar from '@/components/AppTopBar';
+import AddPassengerModal from '@/components/AddPassengerModal';
 
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -40,6 +41,7 @@ function DashboardPageInner() {
   const [loading, setLoading] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [feedOpen, setFeedOpen] = useState(false);
+  const [addPassengerModalOpen, setAddPassengerModalOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -117,6 +119,10 @@ function DashboardPageInner() {
               }} />
               {active.length} active
             </span>
+            <button
+              onClick={() => setAddPassengerModalOpen(true)}
+              style={{ ...pill('var(--blue)', 'var(--blue-dim)'), cursor: 'pointer', border: 'none' }}
+            >+ Add passenger</button>
             <button onClick={simulateIncident}
               style={{ ...pill('var(--red)', 'var(--red-dim)'), cursor: 'pointer', border: 'none' }}
               title="Demo only: simulate a fake incident"
@@ -124,6 +130,7 @@ function DashboardPageInner() {
           </>
         }
         extraMobileControls={[
+          { label: '+ Add passenger', color: 'var(--blue)', onClick: () => setAddPassengerModalOpen(true) },
           { label: 'Simulate incident', color: 'var(--red)', onClick: simulateIncident },
         ]}
       />
@@ -290,6 +297,15 @@ function DashboardPageInner() {
           {MOCK_MODE ? 'Demo' : 'Live'} · {clientTime ?? '--:--:--'}
         </div>
       )}
+
+      <AddPassengerModal
+        isOpen={addPassengerModalOpen}
+        onClose={() => setAddPassengerModalOpen(false)}
+        onSuccess={() => {
+          // Refresh page or push to passengers page
+          router.refresh();
+        }}
+      />
 
       <style>{`
         @keyframes pulse { 0%,100% { opacity:1 } 50% { opacity:0.3 } }

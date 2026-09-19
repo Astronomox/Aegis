@@ -26,7 +26,9 @@ Aegis/
 ├── supabase/
 │   └── functions/
 │       └── notify-watcher/  Edge Function — Telegram push alerts
-├── aegis-schema.sql       Full Supabase schema (run once in SQL Editor)
+├── sql/
+│   ├── aegis-schema.sql       Full Supabase schema (run once in SQL Editor)
+│   └── create-demo-user.sql   Demo user SQL helper
 ├── aegis-backend-handoff.md  Step-by-step Supabase setup guide
 ├── PITCH.md               Hackathon pitch deck in markdown
 └── README.md              This file
@@ -69,7 +71,7 @@ Both apps run in **mock mode** when no Supabase keys are present:
 See `aegis-backend-handoff.md` for the full step-by-step guide. The short version:
 
 1. Create a project at [supabase.com](https://supabase.com)
-2. Run `aegis-schema.sql` in the SQL Editor
+2. Run `sql/aegis-schema.sql` in the SQL Editor
 3. Grab your Project URL and anon key
 4. Fill in the env files:
 
