@@ -14,3 +14,12 @@ export const FONTS = {
   body: 'System',    // Montserrat
   bodyBold: 'System',
 };
+
+export const SPACING = {
+  xs: 4,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 40,
+  xxl: 64,
+};
