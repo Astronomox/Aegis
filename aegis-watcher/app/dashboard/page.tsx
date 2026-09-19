@@ -65,7 +65,8 @@ export default function DashboardPage() {
 
   useEffect(() => {
     if (MOCK_MODE || !supabase) return;
-    const channel = supabase
+    const client = supabase; // narrow once, reuse in the cleanup closure below
+    const channel = client
       .channel('incidents-realtime')
       .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'incidents' },
         (payload: { new: Incident }) => {
@@ -75,7 +76,7 @@ export default function DashboardPage() {
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'incidents' },
         (payload: { new: Incident }) => setIncidents((prev) => prev.map((i) => i.id === payload.new.id ? payload.new : i)))
       .subscribe();
-    return () => { supabase.removeChannel(channel); };
+    return () => { client.removeChannel(channel); };
   }, []);
 
   const active = incidents.filter((i) => i.status === 'active');
@@ -294,6 +295,7 @@ export default function DashboardPage() {
             incidents={incidents}
             selectedId={selectedId}
             onSelect={selectIncident}
+            passengerName={passengerName}
           />
         </div>
       ) : (
@@ -339,6 +341,7 @@ export default function DashboardPage() {
                 incidents={incidents}
                 selectedId={selectedId}
                 onSelect={selectIncident}
+                passengerName={passengerName}
               />
             </div>
           )}
@@ -545,12 +548,13 @@ function FeedHeader({ onClose }: { onClose?: () => void }) {
 }
 
 function FeedList({
-  loading, incidents, selectedId, onSelect,
+  loading, incidents, selectedId, onSelect, passengerName,
 }: {
   loading: boolean;
   incidents: Incident[];
   selectedId: string | null;
   onSelect: (id: string) => void;
+  passengerName: (id: string) => string;
 }) {
   return (
     <div style={{ flex: 1, overflowY: 'auto', padding: 6 }}>
