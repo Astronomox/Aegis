@@ -22,3 +22,27 @@ Project Settings → API → copy:
 
 ## 4. Drop keys into both apps
 
+**Passenger app** (`aegis-passenger/.env`):
+```
+EXPO_PUBLIC_SUPABASE_URL=<project url>
+EXPO_PUBLIC_SUPABASE_ANON_KEY=<anon key>
+```
+
+**Watcher dashboard** (`aegis-watcher/.env.local`):
+```
+NEXT_PUBLIC_SUPABASE_URL=<project url>
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
+AEGIS_PASSCODE=<pick a passcode for the dashboard login>
+```
+
+Both apps auto-detect real keys and switch out of mock mode automatically. Restart both dev servers after adding env vars (`pnpm exec expo start -c` and `pnpm dev`).
+
+## 5. Data shape reference (already matches frontend exactly)
+
+**incidents**
+| field | type | notes |
+|---|---|---|
+| id | uuid | auto |
+| passenger_id | uuid | FK → users.id |
+| latitude | float | |
+| longitude | float | |
