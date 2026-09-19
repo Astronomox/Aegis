@@ -60,3 +60,65 @@ export default function IncidentDetailPage() {
       position: 'absolute', inset: 0,
       backgroundImage: `linear-gradient(rgba(0,0,0,0.02) 1px, transparent 1px), linear-gradient(90deg, rgba(0,0,0,0.02) 1px, transparent 1px)`,
       backgroundSize: '60px 60px',
+    },
+    card: {
+      position: 'relative', width: '100%', maxWidth: 480, margin: '0 24px',
+      background: 'var(--glass)', backdropFilter: 'var(--blur)',
+      border: '1px solid var(--glass-border)', borderRadius: 10,
+      overflow: 'hidden',
+    },
+    header: {
+      padding: '16px 20px',
+      borderBottom: '1px solid var(--glass-border)',
+      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    },
+    body: { padding: 20 },
+    label: {
+      fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-muted)',
+      letterSpacing: 1.5, marginBottom: 4,
+    },
+    value: {
+      fontFamily: 'var(--mono)', fontSize: 14, fontWeight: 600,
+      color: 'var(--text)', marginBottom: 16,
+    },
+    btn: {
+      width: '100%', padding: '12px 0', borderRadius: 4,
+      fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700,
+      letterSpacing: 2, transition: 'all 0.2s', marginTop: 8,
+    },
+  };
+
+  if (loading) return (
+    <div style={{ ...s.page, color: 'var(--text-muted)', fontFamily: 'var(--mono)', fontSize: 11, letterSpacing: 2 }}>
+      LOADING INCIDENT DATA...
+    </div>
+  );
+
+  if (!incident) return (
+    <div style={{ ...s.page, flexDirection: 'column', gap: 16, color: 'var(--text-muted)', fontFamily: 'var(--mono)', fontSize: 11 }}>
+      <span>INCIDENT NOT FOUND</span>
+      <button onClick={() => router.push('/dashboard')} style={{ ...s.btn, width: 'auto', padding: '10px 24px', background: 'var(--red-dim)', color: 'var(--red)', border: '1px solid rgba(255,59,59,0.2)' }}>
+        RETURN TO DASHBOARD
+      </button>
+    </div>
+  );
+
+  const isActive = incident.status === 'active';
+
+  return (
+    <div style={s.page}>
+      <div style={s.grid} />
+      <div style={s.card}>
+        <div style={s.header}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{
+              width: 8, height: 8, borderRadius: '50%',
+              background: isActive ? 'var(--red)' : 'var(--green)',
+              boxShadow: isActive ? '0 0 8px var(--red)' : '0 0 8px var(--green)',
+            }} />
+            <span style={{
+              fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700,
+              color: isActive ? 'var(--red)' : 'var(--green)', letterSpacing: 2,
+            }}>
+              {isActive ? 'ACTIVE EMERGENCY' : 'RESOLVED'}
+            </span>
