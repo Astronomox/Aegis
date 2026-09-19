@@ -1,72 +1,131 @@
-# Aegis: Backend Handoff
+# Aegis: Backend Setup Guide
 
-Frontend (Passenger App + Watcher Dashboard) is built and expects a Supabase backend with the shape below. Everything on the frontend side is already wired to read these exact table names, field names, and env var names. Just provision Supabase and drop the keys in. No frontend code needs to change.
+Both apps are fully wired — just provision Supabase, drop in the keys, and they go live. No code changes needed.
 
-## 1. Create the Supabase project
-- supabase.com → New Project → name it `aegis`
-- Save the DB password somewhere safe
+---
 
-## 2. Run the schema
-Run the attached `aegis-schema.sql` in the Supabase SQL Editor (one shot). It creates:
-- `users` table (passengers)
-- `watchers` table (linked to a passenger)
-- `incidents` table (the core table both apps read/write)
-- Enables Realtime on `incidents`
-- Sets open RLS policies (fine for hackathon speed, tighten later)
-- Creates the `audio-clips` storage bucket
+## Step 1 — Create the Supabase project
 
-## 3. Grab the keys
-Project Settings → API → copy:
-- Project URL
-- `anon` public key
+1. Go to [supabase.com](https://supabase.com) → New Project → name it `aegis`
+2. Save the DB password somewhere safe
+3. Wait for the project to spin up (~1 min)
 
-## 4. Drop keys into both apps
+---
 
-**Passenger app** (`aegis-passenger/.env`):
+## Step 2 — Run the schema
+
+Paste the entire contents of `aegis-schema.sql` into the Supabase **SQL Editor** and click Run.
+
+This creates:
+- `users` table (passengers — not required for the demo but kept for future use)
+- `watchers` table
+- `incidents` table — the core table both apps share
+- Realtime enabled on `incidents`
+- Open RLS policies (anyone with the anon key can read/write — fine for hackathon)
+- `audio-clips` storage bucket (public)
+
+> **Note:** `incidents.passenger_id` is `text`, not a UUID FK. This lets the hardcoded
+> `'demo-passenger-001'` string from the mobile app insert without errors.
+
+---
+
+## Step 3 — Grab the keys
+
+**Project Settings → API**, copy:
+- **Project URL** — looks like `https://abcdefgh.supabase.co`
+- **anon public key** — the long `eyJ...` JWT
+
+---
+
+## Step 4 — Add keys to both apps
+
+**`aegis-passenger/.env`** (already created, just fill in the values):
 ```
-EXPO_PUBLIC_SUPABASE_URL=<project url>
-EXPO_PUBLIC_SUPABASE_ANON_KEY=<anon key>
+EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=eyJ...
 ```
 
-**Watcher dashboard** (`aegis-watcher/.env.local`):
+**`aegis-watcher/.env.local`** (already created, just fill in the values):
 ```
-NEXT_PUBLIC_SUPABASE_URL=<project url>
-NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
-AEGIS_PASSCODE=<pick a passcode for the dashboard login>
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=eyJ...
+AEGIS_PASSCODE=1234
 ```
 
-Both apps auto-detect real keys and switch out of mock mode automatically. Restart both dev servers after adding env vars (`pnpm exec expo start -c` and `pnpm dev`).
+Both apps auto-detect real keys and switch out of mock mode. Restart after editing:
+- Passenger: `pnpm exec expo start -c` (the `-c` clears the Expo cache)
+- Watcher: `pnpm dev` (from `aegis-watcher/`)
 
-## 5. Data shape reference (already matches frontend exactly)
+---
+
+## Step 5 — Telegram alerts (optional but impressive)
+
+A Supabase Edge Function is at `supabase/functions/notify-watcher/index.ts`.  
+It fires on every incident INSERT and sends a Telegram message with the passenger name, trigger type, timestamp, and a Google Maps link.
+
+### Get a Telegram bot
+1. Message [@BotFather](https://t.me/BotFather) → `/newbot` → follow prompts → copy the token
+2. Add the bot to a group (or use a DM) and send any message to it
+3. Get the chat ID: `https://api.telegram.org/bot<TOKEN>/getUpdates` — find `chat.id` in the response
+
+### Deploy the function
+```bash
+# Install Supabase CLI if needed
+npm install -g supabase
+
+# Login and link to your project
+supabase login
+supabase link --project-ref <your-project-ref>
+
+# Set secrets
+supabase secrets set TELEGRAM_BOT_TOKEN=<your-token>
+supabase secrets set TELEGRAM_CHAT_ID=<your-chat-id>
+
+# Deploy
+supabase functions deploy notify-watcher
+```
+
+### Wire up the webhook
+In the Supabase dashboard: **Database → Webhooks → Create a new hook**
+- Name: `on_incident_insert`
+- Table: `incidents`
+- Events: `INSERT`
+- Type: **Supabase Edge Functions**
+- Edge Function: `notify-watcher`
+
+That's it. Every distress signal from the passenger app now pings Telegram instantly.
+
+---
+
+## Data shape reference
 
 **incidents**
 | field | type | notes |
 |---|---|---|
 | id | uuid | auto |
-| passenger_id | uuid | FK → users.id |
+| passenger_id | **text** | hardcoded `'demo-passenger-001'` in mobile app |
 | latitude | float | |
 | longitude | float | |
 | trigger_type | text | `'manual'` or `'audio'` |
-| audio_url | text | nullable, from `audio-clips` bucket |
+| audio_url | text | nullable, public URL from `audio-clips` bucket |
 | status | text | `'active'` or `'resolved'` |
 | created_at | timestamptz | auto |
 
-**users**
+**users** (not used by demo flow, kept for future)
 | field | type |
 |---|---|
 | id | uuid |
 | name | text |
 | phone_number | text |
 
-**watchers**
-| field | type |
-|---|---|
-| id | uuid |
-| passenger_id | uuid (FK) |
-| watcher_phone | text |
+---
 
-## 6. Still needed (not built yet)
-- **Telegram alert Edge Function**: should fire on `incidents` INSERT and hit the Telegram Bot API to notify the watcher. Not built yet, but the code snippet is available on request.
-- **Passcode gate route handler** already exists in the Next.js app (`app/api/auth/passcode/route.ts`), and no backend work is needed there since it's self-contained.
+## Quick start checklist
 
-Ping the frontend person if the data shape needs to change for any reason, since the mock data and TypeScript types will need matching updates on that side.
+- [ ] Created Supabase project
+- [ ] Ran `aegis-schema.sql` in SQL Editor
+- [ ] Filled in `aegis-passenger/.env`
+- [ ] Filled in `aegis-watcher/.env.local`
+- [ ] Restarted both dev servers
+- [ ] (Optional) Deployed `notify-watcher` Edge Function
+- [ ] (Optional) Created Database Webhook pointing to `notify-watcher`
