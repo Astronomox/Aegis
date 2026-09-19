@@ -67,3 +67,72 @@ export default function HistoryPage() {
       <div style={{ position: 'relative', maxWidth: 640, margin: '0 auto', padding: isMobile ? '16px' : '24px' }}>
         {/* Header */}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+          <div>
+            <button
+              onClick={() => router.push('/dashboard')}
+              style={{ background: 'none', border: 'none', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-muted)', letterSpacing: 1, cursor: 'pointer', marginBottom: 8, display: 'block' }}
+            >← BACK TO LIVE</button>
+            <h1 style={{ fontSize: 20, fontWeight: 800, letterSpacing: 1 }}>INCIDENT HISTORY</h1>
+          </div>
+          <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-muted)', letterSpacing: 1 }}>
+            {total} RECORDS
+          </span>
+        </div>
+
+        {/* Table */}
+        <div style={{
+          background: 'var(--glass)', backdropFilter: 'var(--blur)',
+          border: '1px solid var(--glass-border)', borderRadius: 8,
+          overflow: 'hidden',
+        }}>
+          {/* Table header - hidden on mobile, cards are self-labeled instead */}
+          {!isMobile && (
+            <div style={{
+              display: 'grid', gridTemplateColumns: '1fr 1.2fr 0.6fr 0.6fr',
+              padding: '10px 16px', borderBottom: '1px solid var(--glass-border)',
+            }}>
+              {['PASSENGER', 'COORDINATES', 'TRIGGER', 'TIME'].map((h) => (
+                <span key={h} style={{ fontFamily: 'var(--mono)', fontSize: 9, fontWeight: 700, color: 'var(--text-muted)', letterSpacing: 1.5 }}>
+                  {h}
+                </span>
+              ))}
+            </div>
+          )}
+
+          {loading ? (
+            <div style={{ padding: 40, textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-muted)' }}>
+              LOADING...
+            </div>
+          ) : incidents.length === 0 ? (
+            <div style={{ padding: 40, textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-muted)' }}>
+              NO RESOLVED INCIDENTS
+            </div>
+          ) : isMobile ? (
+            // Mobile: stacked card per incident, all fields labeled
+            incidents.map((inc) => (
+              <button
+                key={inc.id}
+                onClick={() => router.push(`/dashboard/incidents/${inc.id}`)}
+                style={{
+                  display: 'block', width: '100%', textAlign: 'left',
+                  padding: '14px 16px', background: 'transparent', border: 'none',
+                  borderBottom: '1px solid rgba(0,0,0,0.05)',
+                }}
+              >
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 4 }}>
+                  {MOCK_MODE ? MOCK_USERS[inc.passenger_id] || inc.passenger_id : inc.passenger_id}
+                </div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-dim)', marginBottom: 6 }}>
+                  {inc.latitude.toFixed(4)}, {inc.longitude.toFixed(4)}
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <span style={{
+                    fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-dim)',
+                    background: 'rgba(0,0,0,0.04)', padding: '2px 7px', borderRadius: 3,
+                  }}>{inc.trigger_type.toUpperCase()}</span>
+                  <span style={{
+                    fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-muted)',
+                    background: 'rgba(0,0,0,0.04)', padding: '2px 7px', borderRadius: 3,
+                  }}>{timeAgo(inc.created_at)}</span>
+                </div>
+              </button>
