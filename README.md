@@ -144,7 +144,8 @@ Setup: see `aegis-backend-handoff.md` → Step 5.
 |---|---|---|
 | Free | ₦0 | 1 watcher, manual trigger, live dashboard |
 | Personal | ₦1,500/mo | 5 watchers, audio detection, Telegram alerts, 30-day history |
-| Family | ₦3,500/mo | 10 passengers, shared dashboard, unlimited history |
+| Family | ₦3,500/mo | 10 passengers, shared dashboard, selected history |
+| public transport companies | ₦100,000/month | 10 buses, shared dashboard, unlimited history |
 
 ---
 

@@ -1,10 +1,24 @@
+import type { ReactNode } from 'react';
+
 export default function DashboardLayout({
   children,
 }: {
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
-    <div style={{ height: '100vh', width: '100vw', position: 'relative', overflow: 'hidden' }}>
+    <div
+      style={{
+        minHeight: '100dvh',
+        width: '100%',
+        position: 'relative',
+        overflowX: 'hidden',
+        color: '#f5f2eb',
+        backgroundColor: '#080909',
+        backgroundImage:
+          'radial-gradient(circle, rgba(255,255,255,0.12) 1px, transparent 1.5px)',
+        backgroundSize: '36px 36px',
+      }}
+    >
       {children}
     </div>
   );

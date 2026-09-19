@@ -1,7 +1,14 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, type CSSProperties, type FormEvent } from 'react';
 import { useRouter } from 'next/navigation';
+
+const ink = '#090909';
+const paper = '#f3f1ec';
+const muted = '#a3a29d';
+const red = '#d94a42';
+const line = '#2a2a2a';
+const dots = 'radial-gradient(circle, rgba(255,255,255,0.14) 1px, transparent 1.2px)';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -11,201 +18,52 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  const handleSubmit = async () => {
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     if (!email.trim() || !password.trim()) return;
-    setLoading(true);
-    setError('');
-
-    const endpoint = isSignUp ? '/api/auth/signup' : '/api/auth/login';
-
+    setLoading(true); setError('');
     try {
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch(isSignUp ? '/api/auth/signup' : '/api/auth/login', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: email.trim(), password: password.trim() }),
       });
+      if (response.ok) router.push('/dashboard');
+      else { const data = await response.json().catch(() => ({})); setError(data.error || (isSignUp ? 'Could not create account' : 'Invalid email or password')); }
+    } catch { setError('Connection failed. Please try again.'); }
+    finally { setLoading(false); }
+  }
 
-      if (res.ok) {
-        router.push('/dashboard');
-      } else {
-        const data = await res.json().catch(() => ({}));
-        setError(data.error || (isSignUp ? 'Could not create account' : 'Invalid email or password'));
-      }
-    } catch {
-      setError('Connection failed');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const input: CSSProperties = { width: '100%', background: '#111', color: paper, border: `1px solid ${line}`, borderRadius: 4, padding: '14px 15px', outline: 'none', fontSize: 14 };
+  const label: CSSProperties = { display: 'block', color: '#c5c3bd', fontSize: 11, fontWeight: 750, letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 8 };
 
-  // Two verified free photos, distinct per mode so login and signup feel
-  // different, not just a copy-pasted screen.
-  const image = isSignUp
-    ? 'https://images.unsplash.com/photo-1776521908392-a68ada9bb47c?w=1200&h=1400&fit=crop'
-    : 'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=1200&h=1400&fit=crop&crop=face';
+  return <main style={{ minHeight: '100vh', display: 'grid', gridTemplateColumns: 'minmax(310px, 1.05fr) minmax(390px, .95fr)', background: ink, color: paper, fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}>
+    <section className="aegis-auth-aside" style={{ position: 'relative', overflow: 'hidden', minHeight: '100vh', padding: 'clamp(28px, 6vw, 72px)', backgroundImage: dots, backgroundSize: '24px 24px', borderRight: `1px solid ${line}`, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+      <img src="/aegis-logo.png" alt="Aegis" style={{ height: 20, width: 'fit-content', filter: 'grayscale(1) brightness(3)' }} />
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: 500 }}>
+        <p style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 10, fontWeight: 800, letterSpacing: '.18em', textTransform: 'uppercase', color: '#bbb9b2' }}><i style={{ width: 7, height: 7, borderRadius: '50%', background: red }} />Watcher access</p>
+        <h1 style={{ fontSize: 'clamp(40px, 5vw, 66px)', letterSpacing: '-.07em', lineHeight: .94, margin: '25px 0 22px' }}>Stay close<br /><span style={{ color: '#777671' }}>from afar.</span></h1>
+        <p style={{ color: muted, maxWidth: 390, fontSize: 15, lineHeight: 1.75 }}>Your dashboard turns a quiet signal into the information you need to respond with care and clarity.</p>
+      </div>
+      <div style={{ position: 'relative', zIndex: 1, borderTop: `1px solid ${line}`, paddingTop: 18, color: '#85837d', fontSize: 12, lineHeight: 1.55 }}><span style={{ display: 'inline-block', width: 7, height: 7, borderRadius: '50%', background: '#aebda1', marginRight: 7 }} />Aegis systems are operational<br /><span style={{ marginLeft: 14 }}>Private. Discreet. Always on your side.</span></div>
+    </section>
 
-  const badge = isSignUp ? 'Welcome aboard' : 'Welcome back';
-  const quote = isSignUp
-    ? '"Silent protection starts here."'
-    : '"When they\'re okay, you\'re okay."';
-
-  const formPanel = (
-    <div className="auth-form-panel">
+    <section style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: '48px 28px', background: '#0d0d0d' }}>
       <div style={{ width: '100%', maxWidth: 380 }}>
-        <img src="/aegis-logo.png" alt="Aegis" style={{ height: 22, marginBottom: 40 }} />
-
-        <h1 style={{
-          fontFamily: 'var(--display)', fontSize: 'clamp(32px, 5vw, 42px)',
-          fontWeight: 800, color: 'var(--blue)', marginBottom: 10, lineHeight: 1.1,
-        }}>
-          {isSignUp ? 'Join Aegis' : 'Welcome back'}
-        </h1>
-        <p style={{ fontSize: 14, color: 'var(--text-dim)', marginBottom: 32 }}>
-          {isSignUp
-            ? 'Create your watcher account and start looking out for the people who matter.'
-            : 'Sign in to your watcher dashboard.'}
-        </p>
-
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>
-            Email
-          </label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            autoFocus
-            style={{
-              width: '100%', padding: '13px 16px', fontSize: 14,
-              background: 'var(--bg)', border: '1.5px solid var(--border)',
-              borderRadius: 'var(--radius-sm)', outline: 'none',
-              color: 'var(--text)', transition: 'border-color 0.2s',
-            }}
-            onFocus={(e) => (e.target.style.borderColor = 'var(--blue)')}
-            onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
-          />
-        </div>
-
-        <div style={{ marginBottom: isSignUp ? 8 : 12 }}>
-          <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>
-            Password
-          </label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSubmit()}
-            placeholder="********"
-            style={{
-              width: '100%', padding: '13px 16px', fontSize: 14,
-              background: 'var(--bg)', border: '1.5px solid var(--border)',
-              borderRadius: 'var(--radius-sm)', outline: 'none',
-              color: 'var(--text)', transition: 'border-color 0.2s',
-            }}
-            onFocus={(e) => (e.target.style.borderColor = 'var(--blue)')}
-            onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
-          />
-        </div>
-
-        {!isSignUp && (
-          <div style={{ textAlign: 'right', marginBottom: 24 }}>
-            <button style={{ background: 'none', border: 'none', fontSize: 13, fontWeight: 700, color: 'var(--blue)' }}>
-              Forgot password?
-            </button>
-          </div>
-        )}
-
-        {isSignUp && <div style={{ marginBottom: 24 }} />}
-
-        {error && (
-          <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--red)', marginBottom: 16 }}>
-            {error}
-          </p>
-        )}
-
-        <button
-          onClick={handleSubmit}
-          disabled={loading}
-          style={{
-            width: '100%', padding: '15px 0', fontSize: 15, fontWeight: 700,
-            color: '#fff', background: 'var(--blue)',
-            borderRadius: 'var(--radius-pill)', border: 'none',
-            opacity: loading ? 0.6 : 1, transition: 'opacity 0.2s',
-          }}
-        >
-          {loading
-            ? (isSignUp ? 'Creating account...' : 'Signing in...')
-            : (isSignUp ? 'Create account' : 'Sign in')}
-        </button>
-
-        <p style={{ fontSize: 13, color: 'var(--text-dim)', textAlign: 'center', marginTop: 24 }}>
-          {isSignUp ? 'Already have an account? ' : 'Do not have an account? '}
-          <button
-            onClick={() => { setIsSignUp(!isSignUp); setError(''); }}
-            style={{ background: 'none', border: 'none', color: 'var(--blue)', fontWeight: 700, fontSize: 13 }}
-          >{isSignUp ? 'Sign in' : 'Sign up'}</button>
-        </p>
-
-        <p style={{ fontSize: 11, color: 'var(--text-muted)', textAlign: 'center', marginTop: 20 }}>
-          Demo mode: use watcher@aegis.demo / aegis1234
-        </p>
+        <button onClick={() => router.push('/')} style={{ background: 'transparent', border: 0, padding: 0, color: '#98968f', fontSize: 13, cursor: 'pointer', marginBottom: 54 }}>← Back to Aegis</button>
+        <p style={{ color: '#a7a59f', fontSize: 10, fontWeight: 800, letterSpacing: '.17em', textTransform: 'uppercase', marginBottom: 15 }}>{isSignUp ? 'Create watcher account' : 'Secure watcher sign in'}</p>
+        <h2 style={{ fontSize: 34, letterSpacing: '-.055em', margin: '0 0 10px' }}>{isSignUp ? 'Create your access.' : 'Welcome back.'}</h2>
+        <p style={{ color: muted, lineHeight: 1.6, fontSize: 14, margin: '0 0 32px' }}>{isSignUp ? 'Set up your account and start looking out for the people who matter.' : 'Sign in to open your watcher dashboard.'}</p>
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: 18 }}><label htmlFor="email" style={label}>Email address</label><input id="email" type="email" autoComplete="email" autoFocus value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" style={input} onFocus={e => e.currentTarget.style.borderColor = '#76736b'} onBlur={e => e.currentTarget.style.borderColor = line} /></div>
+          <div style={{ marginBottom: 13 }}><label htmlFor="password" style={label}>Password</label><input id="password" type="password" autoComplete={isSignUp ? 'new-password' : 'current-password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" style={input} onFocus={e => e.currentTarget.style.borderColor = '#76736b'} onBlur={e => e.currentTarget.style.borderColor = line} /></div>
+          {!isSignUp && <div style={{ textAlign: 'right', marginBottom: 26 }}><button type="button" style={{ border: 0, padding: 0, background: 'transparent', color: '#bdbab2', fontSize: 12, cursor: 'pointer' }}>Forgot password?</button></div>}
+          {isSignUp && <div style={{ height: 26 }} />}
+          {error && <p role="alert" style={{ margin: '0 0 15px', padding: '10px 12px', background: '#281312', border: '1px solid #65302c', borderRadius: 4, color: '#f47d75', fontSize: 12 }}>{error}</p>}
+          <button type="submit" disabled={loading} style={{ width: '100%', padding: '14px', border: 0, borderRadius: 4, background: paper, color: '#111', fontSize: 14, fontWeight: 800, cursor: loading ? 'wait' : 'pointer', opacity: loading ? .6 : 1 }}>{loading ? (isSignUp ? 'Creating account…' : 'Signing in…') : (isSignUp ? 'Create account' : 'Sign in')}</button>
+        </form>
+        <p style={{ color: muted, fontSize: 13, textAlign: 'center', marginTop: 26 }}>{isSignUp ? 'Already have an account? ' : 'New to Aegis? '}<button onClick={() => { setIsSignUp(!isSignUp); setError(''); }} style={{ border: 0, background: 'transparent', padding: 0, color: paper, fontWeight: 750, cursor: 'pointer', fontSize: 13 }}>{isSignUp ? 'Sign in' : 'Create an account'}</button></p>
+        <p style={{ color: '#66645f', fontSize: 11, textAlign: 'center', marginTop: 22 }}>Demo: watcher@aegis.demo / aegis1234</p>
       </div>
-    </div>
-  );
-
-  const imagePanel = (
-    <div className="auth-image-panel" style={{
-      backgroundImage: `url(${image})`,
-      backgroundSize: 'cover', backgroundPosition: 'center',
-    }}>
-      <div style={{
-        position: 'absolute', inset: 0,
-        background: 'linear-gradient(180deg, rgba(15,33,103,0.15) 0%, rgba(15,33,103,0.55) 100%)',
-      }} />
-      {/* Vignette mesh: a darkened radial patch behind the cursive heading so
-          it reads clearly regardless of what's underneath in the photo. */}
-      <div style={{
-        position: 'absolute', top: 0, left: 0, right: 0, height: '55%',
-        background: 'radial-gradient(ellipse 90% 100% at 15% 0%, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.25) 45%, transparent 75%)',
-      }} />
-      <div style={{
-        position: 'absolute', top: 36, left: 44, right: 24,
-      }}>
-        <span style={{
-          fontFamily: "'Dancing Script', cursive",
-          fontSize: 'clamp(40px, 6vw, 58px)',
-          fontWeight: 700,
-          color: '#fff',
-          lineHeight: 1.1,
-          textShadow: '0 2px 12px rgba(0,0,0,0.35)',
-          display: 'inline-block',
-        }}>{badge}</span>
-      </div>
-      <div style={{
-        position: 'absolute', bottom: 32, left: 32, right: 32,
-      }}>
-        <p style={{
-          fontFamily: 'var(--display)', fontSize: 20, fontWeight: 700,
-          color: '#fff', fontStyle: 'italic', lineHeight: 1.4,
-        }}>{quote}</p>
-      </div>
-    </div>
-  );
-
-  return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexWrap: 'wrap' }}>
-      {isSignUp ? (
-        <>
-          {imagePanel}
-          {formPanel}
-        </>
-      ) : (
-        <>
-          {formPanel}
-          {imagePanel}
-        </>
-      )}
-    </div>
-  );
+    </section>
+  </main>;
 }

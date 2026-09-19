@@ -1,248 +1,64 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
+import type { CSSProperties } from 'react';
 import LandingMapPreview from '@/components/LandingMapPreview';
 import { BellIcon, MicIcon, PinIcon, CheckCircleIcon } from '@/components/icons/Icons';
 
+const ink = '#090909';
+const paper = '#f3f1ec';
+const muted = '#a3a29d';
+const red = '#d94a42';
+const line = '#2a2a2a';
+const dots = 'radial-gradient(circle, rgba(255,255,255,0.15) 1px, transparent 1.2px)';
+
 export default function LandingPage() {
   const router = useRouter();
+  const login = () => router.push('/login');
+  const primary: CSSProperties = { background: paper, color: '#111', border: `1px solid ${paper}`, borderRadius: 4, padding: '12px 18px', fontSize: 13, fontWeight: 750, cursor: 'pointer', textDecoration: 'none' };
+  const eyebrow: CSSProperties = { display: 'flex', alignItems: 'center', gap: 9, color: '#bbb9b2', fontSize: 10, fontWeight: 800, letterSpacing: '.18em', textTransform: 'uppercase' };
+  const steps = [
+    ['01', 'Open before you board', 'Aegis looks inactive while quietly preparing your journey.'],
+    ['02', 'Signal for help', 'Double-tap the screen or trigger an alert with a distress sound.'],
+    ['03', 'Your watcher sees', 'Your location, a private audio clip and trigger type arrive immediately.'],
+    ['04', 'They act quickly', 'They can open directions, coordinate help and resolve the alert.'],
+  ];
 
-  return (
-    <div style={{ minHeight: '100vh', background: 'var(--blue)', overflowX: 'hidden' }}>
+  return <main style={{ minHeight: '100vh', overflowX: 'hidden', background: ink, color: paper, fontFamily: 'Inter, ui-sans-serif, system-ui, sans-serif' }}>
+    <nav style={{ height: 74, padding: '0 clamp(22px, 5vw, 74px)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: `1px solid ${line}` }}>
+      <img src="/aegis-logo.png" alt="Aegis" style={{ height: 19, filter: 'grayscale(1) brightness(3)' }} />
+      <div className="aegis-nav" style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
+        <a href="#how" style={{ color: muted, fontWeight: 650, fontSize: 13, textDecoration: 'none' }}>How it works</a>
+        <a href="#watchers" style={{ color: muted, fontWeight: 650, fontSize: 13, textDecoration: 'none' }}>For watchers</a>
+        <button style={primary} onClick={login}>Get started</button>
+      </div>
+    </nav>
 
-      {/* NAV */}
-      <nav style={{
-        position: 'sticky', top: 0, zIndex: 50,
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '16px 24px',
-        background: 'rgba(15,33,103,0.95)', backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
-      }}>
-        <img src="/aegis-logo.png" alt="Aegis" style={{ height: 20, filter: 'invert(1) brightness(2)' }} />
-        <div className="landing-nav-links">
-          <div className="landing-nav-text-links">
-            <a href="#how" style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>How it works</a>
-            <a href="#watcher" style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.6)' }}>For watchers</a>
-          </div>
-          <button onClick={() => router.push('/login')} style={{
-            fontSize: 13, fontWeight: 700, color: 'var(--blue)', background: 'var(--green)',
-            padding: '10px 22px', borderRadius: 'var(--radius-pill)', border: 'none', flexShrink: 0,
-          }}>Get started</button>
-        </div>
-      </nav>
+    <section style={{ minHeight: 610, padding: 'clamp(68px, 12vw, 150px) clamp(22px, 10vw, 150px)', position: 'relative', overflow: 'hidden', backgroundImage: dots, backgroundSize: '24px 24px' }}>
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: 760 }}>
+        <p style={eyebrow}><i style={{ width: 7, height: 7, borderRadius: '50%', background: red }} />Quiet protection for every journey</p>
+        <h1 style={{ fontSize: 'clamp(47px, 7vw, 86px)', letterSpacing: '-.075em', lineHeight: .94, margin: '25px 0 23px' }}>Help is there.<br /><em style={{ color: '#777671', fontStyle: 'normal' }}>No one needs to know.</em></h1>
+        <p style={{ maxWidth: 490, color: muted, lineHeight: 1.7, fontSize: 16 }}>Aegis is a discreet safety companion for interstate travel. A silent phone app for them, and clear information for the people watching over them.</p>
+        <div style={{ display: 'flex', gap: 11, marginTop: 30, flexWrap: 'wrap' }}><a href="#how" style={primary}>See how it works</a><button onClick={login} style={{ background: 'transparent', color: paper, border: '1px solid #505050', borderRadius: 4, padding: '12px 18px', fontWeight: 750, fontSize: 13, cursor: 'pointer' }}>Watcher login</button></div>
+      </div>
+      <div className="aegis-phone" style={{ position: 'absolute', right: '12%', top: 120, width: 252, height: 342, padding: '30px 22px', border: '7px solid #343434', borderRadius: 33, background: '#030303', boxShadow: '0 25px 60px #000' }}>
+        <small style={{ color: '#666', fontSize: 9, letterSpacing: '.14em' }}>AEGIS IS ACTIVE</small><b style={{ position: 'absolute', bottom: 31, left: 0, right: 0, textAlign: 'center', fontSize: 31, fontWeight: 400 }}>10:09</b><span style={{ position: 'absolute', bottom: 16, left: 0, right: 0, textAlign: 'center', color: '#666', fontSize: 9 }}>Double tap for help</span>
+      </div>
+    </section>
 
-      {/* HERO - blue bleeds left to right into full photo */}
-      <section style={{ position: 'relative', minHeight: 480, overflow: 'hidden' }}>
-        <div style={{
-          position: 'absolute', inset: 0,
-          backgroundImage: 'url(https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=1400&h=700&fit=crop)',
-          backgroundSize: 'cover', backgroundPosition: 'center',
-        }} />
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'linear-gradient(to right, var(--blue) 0%, var(--blue) 35%, rgba(15,33,103,0.85) 50%, rgba(15,33,103,0.3) 70%, transparent 100%)',
-        }} />
+    <div style={{ padding: 20, textAlign: 'center', borderBlock: `1px solid ${line}`, color: '#777671', textTransform: 'uppercase', fontSize: 10, letterSpacing: '.18em', fontWeight: 800 }}>Designed for a calm response when it matters most</div>
+    <section id="how" style={{ padding: '100px clamp(22px, 10vw, 150px)', background: '#0d0d0d', backgroundImage: dots, backgroundSize: '24px 24px' }}>
+      <p style={eyebrow}><i style={{ width: 7, height: 7, borderRadius: '50%', background: red }} />How it works</p><h2 style={{ fontSize: 'clamp(30px, 4vw, 49px)', letterSpacing: '-.06em', lineHeight: 1, margin: '12px 0 40px', maxWidth: 560 }}>Safety in two taps. Silence in between.</h2>
+      <div className="aegis-steps" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', borderTop: `1px solid ${line}` }}>{steps.map(([number, title, copy]) => <article key={number} style={{ padding: '25px 22px 20px 0', borderRight: `1px solid ${line}`, marginRight: 22 }}><span style={{ color: red, fontSize: 11, fontWeight: 800, letterSpacing: '.13em' }}>{number}</span><h3 style={{ fontSize: 17, margin: '17px 0 10px' }}>{title}</h3><p style={{ color: muted, fontSize: 13, lineHeight: 1.65, margin: 0 }}>{copy}</p></article>)}</div>
+    </section>
 
-        <div className="landing-hero-content" style={{ position: 'relative', zIndex: 2 }}>
-          <div style={{
-            fontSize: 11, fontWeight: 700, letterSpacing: 3, textTransform: 'uppercase',
-            color: 'var(--green)', marginBottom: 24,
-          }}>Silent protection for Nigerian roads</div>
+    <section id="watchers" style={{ padding: '100px clamp(22px, 10vw, 150px)' }}><div className="aegis-watcher" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 75, alignItems: 'center' }}>
+      <LandingMapPreview />
+      <div><p style={eyebrow}><i style={{ width: 7, height: 7, borderRadius: '50%', background: red }} />For watchers</p><h2 style={{ fontSize: 'clamp(30px, 4vw, 49px)', letterSpacing: '-.06em', lineHeight: 1, margin: '12px 0 25px', maxWidth: 560 }}>A calm view when things aren’t calm.</h2><p style={{ maxWidth: 490, color: muted, lineHeight: 1.7, fontSize: 16 }}>See the exact information you need without distraction: a live location, the latest signal, and direct actions to take next.</p><div style={{ display: 'grid', gap: 14, margin: '25px 0' }}><Feature Icon={BellIcon} text="Immediate location and alert status" /><Feature Icon={MicIcon} text="Private audio clips when an alert is triggered" /><Feature Icon={PinIcon} text="Directions when every minute matters" /><Feature Icon={CheckCircleIcon} text="Resolve an incident in one place" /></div><button style={primary} onClick={login}>Open watcher dashboard</button></div>
+    </div></section>
+  </main>;
+}
 
-          <h1 style={{
-            fontFamily: 'var(--display)', fontSize: 'clamp(34px, 7vw, 62px)',
-            fontWeight: 800, lineHeight: 1.06, marginBottom: 20,
-          }}>
-            <span style={{ color: '#fff' }}>Your silent</span><br />
-            <span style={{ color: 'rgba(255,255,255,0.3)' }}>shield on</span><br />
-            <span style={{ color: '#fff' }}>every journey.</span>
-          </h1>
-
-          <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.55)', lineHeight: 1.7, marginBottom: 30, maxWidth: 420 }}>
-            Track your loved ones on interstate trips. A black-screen app they carry,
-            a live dashboard you watch. Peace of mind, no words needed.
-          </p>
-
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
-            <a href="#how" style={{
-              fontSize: 14, fontWeight: 700, color: 'var(--blue)', background: 'var(--green)',
-              padding: '14px 28px', borderRadius: 'var(--radius-pill)',
-            }}>See how it works</a>
-            <button onClick={() => router.push('/login')} style={{
-              fontSize: 14, fontWeight: 700, color: '#fff', background: 'transparent',
-              padding: '14px 28px', borderRadius: 'var(--radius-pill)',
-              border: '2px solid rgba(255,255,255,0.2)',
-            }}>Watcher login</button>
-          </div>
-        </div>
-      </section>
-
-      {/* SOCIAL PROOF */}
-      <section style={{
-        padding: '20px 20px', textAlign: 'center',
-        borderTop: '1px solid rgba(255,255,255,0.06)',
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
-      }}>
-        <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: 2, textTransform: 'uppercase', color: 'rgba(255,255,255,0.3)' }}>
-          Protecting passengers on Nigerian roads
-        </p>
-      </section>
-
-      {/* HOW IT WORKS - white section */}
-      <section id="how" className="landing-section" style={{ background: '#fff' }}>
-        <div style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <div style={{ textAlign: 'center', marginBottom: 48 }}>
-            <div style={{
-              fontSize: 11, fontWeight: 700, letterSpacing: 2,
-              color: 'var(--blue)', textTransform: 'uppercase', marginBottom: 14,
-            }}>How it works</div>
-            <h2 style={{
-              fontFamily: 'var(--display)', fontSize: 'clamp(26px, 4vw, 36px)', fontWeight: 800, color: 'var(--blue)',
-            }}>Safety in two taps, silence in between</h2>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20 }}>
-            {[
-              { img: 'https://images.unsplash.com/photo-1776521908392-a68ada9bb47c?w=400&h=280&fit=crop', n: '01', t: 'Open before you board', d: 'The traveler opens Aegis. Screen goes black. Nothing to explain, nothing to hide. It listens quietly the whole trip.' },
-              { img: 'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?w=400&h=280&fit=crop', n: '02', t: 'Two ways to call for help', d: 'Double-tap the black screen manually, or let Aegis detect loud distress sounds through the microphone automatically.' },
-              { img: 'https://images.unsplash.com/photo-1531123897727-8f129e1688ce?w=400&h=280&fit=crop&crop=face', n: '03', t: 'Your watcher sees everything', d: 'Location, audio clip, and trigger type show up instantly on the watcher\'s live map. No phone call needed.' },
-              { img: 'https://images.unsplash.com/photo-1689803754699-945795f08976?w=400&h=280&fit=crop', n: '04', t: 'They act, you stay safe', d: 'The watcher opens your location in Google Maps, listens to the audio, alerts authorities, and marks it resolved.' },
-            ].map((item) => (
-              <div key={item.n} style={{
-                background: '#fff', borderRadius: 16, border: '1px solid rgba(0,0,0,0.06)',
-                overflow: 'hidden',
-              }}>
-                <img src={item.img} alt={item.t} style={{ width: '100%', height: 180, objectFit: 'cover', display: 'block' }} />
-                <div style={{ padding: '18px 20px' }}>
-                  <div style={{
-                    fontFamily: 'var(--display)', fontSize: 38, fontWeight: 800,
-                    color: 'rgba(15,33,103,0.06)', lineHeight: 1, marginBottom: 6,
-                  }}>{item.n}</div>
-                  <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8, color: 'var(--text)' }}>{item.t}</div>
-                  <div style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.6 }}>{item.d}</div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* PASSENGER SECTION - blue with bus photo bleed */}
-      <section style={{ position: 'relative', minHeight: 420, overflow: 'hidden' }}>
-        <div style={{
-          position: 'absolute', inset: 0,
-          backgroundImage: 'url(https://images.unsplash.com/photo-1570125909232-eb263c188f7e?w=1400&h=600&fit=crop)',
-          backgroundSize: 'cover', backgroundPosition: 'center',
-        }} />
-        <div style={{
-          position: 'absolute', inset: 0,
-          background: 'linear-gradient(to right, var(--blue) 0%, var(--blue) 40%, rgba(15,33,103,0.7) 60%, rgba(15,33,103,0.2) 80%, transparent 100%)',
-        }} />
-        <div className="landing-section" style={{ position: 'relative', zIndex: 2, maxWidth: 1200, margin: '0 auto' }}>
-          <div style={{ maxWidth: 480 }}>
-            <div style={{
-              fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase',
-              color: 'var(--green)', marginBottom: 16,
-            }}>For passengers</div>
-            <h2 style={{
-              fontFamily: 'var(--display)', fontSize: 'clamp(24px, 4vw, 34px)', fontWeight: 800,
-              color: '#fff', marginBottom: 16, lineHeight: 1.15,
-            }}>A phone that looks off. It isn't.</h2>
-            <p style={{ fontSize: 15, lineHeight: 1.75, color: 'rgba(255,255,255,0.55)', marginBottom: 26 }}>
-              Before you board, open Aegis. The screen stays pitch black. No one
-              around you would know it's running. But it's listening, it knows
-              where you are, and it's ready to send help the moment you need it.
-            </p>
-            <div style={{
-              padding: '14px 18px', background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12,
-            }}>
-              <p style={{ fontSize: 13, lineHeight: 1.6, color: 'rgba(255,255,255,0.4)' }}>
-                Currently works while the app is open with the screen on.
-                Background triggering is on our roadmap.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* WATCHER SECTION - white, with real map preview */}
-      <section id="watcher" className="landing-section" style={{ background: '#fff' }}>
-        <div className="landing-split-grid" style={{ maxWidth: 1100, margin: '0 auto' }}>
-          <LandingMapPreview />
-
-          <div>
-            <div style={{
-              fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: 'uppercase',
-              color: 'var(--blue)', marginBottom: 16,
-            }}>For watchers</div>
-            <h2 style={{
-              fontFamily: 'var(--display)', fontSize: 'clamp(24px, 4vw, 34px)', fontWeight: 800,
-              color: 'var(--blue)', marginBottom: 16, lineHeight: 1.15,
-            }}>A live map. A real person watching.</h2>
-            <p style={{ fontSize: 15, color: 'var(--text-dim)', lineHeight: 1.75, marginBottom: 26 }}>
-              You're the trusted contact. Aegis gives you a dashboard that
-              turns silence into visibility the moment it matters.
-            </p>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 30 }}>
-              {[
-                { Icon: BellIcon, text: 'Instant alerts with sound and location' },
-                { Icon: MicIcon, text: 'Listen to captured audio clips' },
-                { Icon: PinIcon, text: 'Open exact coordinates in Google Maps' },
-                { Icon: CheckCircleIcon, text: 'Track and resolve incidents' },
-              ].map(({ Icon, text }) => (
-                <div key={text} style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                  <div style={{
-                    width: 38, height: 38, borderRadius: 10,
-                    background: 'var(--blue-dim)', display: 'flex',
-                    alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                  }}>
-                    <Icon size={17} color="var(--blue)" />
-                  </div>
-                  <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--text-dim)' }}>{text}</span>
-                </div>
-              ))}
-            </div>
-
-            <button onClick={() => router.push('/login')} style={{
-              fontSize: 14, fontWeight: 700, color: '#fff', background: 'var(--blue)',
-              padding: '14px 28px', borderRadius: 'var(--radius-pill)', border: 'none',
-            }}>Open watcher dashboard</button>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA BANNER */}
-      <section className="landing-section" style={{ background: 'var(--blue)', textAlign: 'center', borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-        <h2 style={{
-          fontFamily: 'var(--display)', fontSize: 'clamp(24px, 4vw, 32px)', fontWeight: 800,
-          color: '#fff', marginBottom: 12,
-        }}>Start protecting your people today</h2>
-        <p style={{ fontSize: 15, color: 'rgba(255,255,255,0.45)', marginBottom: 26, maxWidth: 400, margin: '0 auto 26px' }}>
-          It takes 30 seconds to set up. One app on their phone, one login for you.
-        </p>
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <button onClick={() => router.push('/login')} style={{
-            fontSize: 14, fontWeight: 700, color: 'var(--blue)', background: 'var(--green)',
-            padding: '14px 32px', borderRadius: 'var(--radius-pill)', border: 'none',
-          }}>Get started free</button>
-          <a href="#how" style={{
-            fontSize: 14, fontWeight: 700, color: '#fff',
-            padding: '14px 32px', borderRadius: 'var(--radius-pill)',
-            border: '2px solid rgba(255,255,255,0.15)',
-          }}>Learn more</a>
-        </div>
-      </section>
-
-      {/* FOOTER */}
-      <footer style={{
-        padding: '24px 20px', textAlign: 'center',
-        borderTop: '1px solid rgba(255,255,255,0.06)', background: 'var(--blue)',
-      }}>
-        <img src="/aegis-logo.png" alt="Aegis" style={{ height: 13, marginBottom: 8, opacity: 0.3, filter: 'invert(1) brightness(2)' }} />
-        <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>Built for safer journeys</p>
-      </footer>
-    </div>
-  );
+function Feature({ Icon, text }: { Icon: typeof BellIcon; text: string }) {
+  return <div style={{ display: 'flex', alignItems: 'center', gap: 11, color: muted, fontSize: 13 }}><Icon size={16} color={red} />{text}</div>;
 }
