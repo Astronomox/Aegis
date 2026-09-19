@@ -109,3 +109,5 @@ coordinators, transport companies, and anyone who believes that safety
 infrastructure should exist for everyday people, not just corporations.
 
 Aegis is live, it works, and it was built in a weekend.
+
+ARIGATO
