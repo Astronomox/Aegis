@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase, MOCK_MODE } from '@/lib/supabase';
 import { useCurrentUser } from '@/lib/useCurrentUser';
+import AppTopBar from '@/components/AppTopBar';
 
 interface WatcherRow {
   id: string;
@@ -34,7 +35,13 @@ export default function PassengersPage() {
       setLoading(false);
       return;
     }
-    if (!user) return;
+    if (!user) {
+      // No authenticated session: nothing to load, but the page must not
+      // spin forever, show the empty state instead.
+      setWatchers([]);
+      setLoading(false);
+      return;
+    }
     const { data, error } = await supabase!
       .from('watchers')
       .select('*')
@@ -85,7 +92,7 @@ export default function PassengersPage() {
     if (error) {
       setAddError(
         error.code === '23505'
-          ? 'You\'re already watching this passenger.'
+          ? 'You are already watching this passenger.'
           : error.message
       );
     } else if (data) {
@@ -106,139 +113,89 @@ export default function PassengersPage() {
     setWatchers((prev) => prev.filter((w) => w.id !== id));
   };
 
-  const handleLogout = async () => {
-    await fetch('/api/auth/logout', { method: 'POST' });
-    router.push('/login');
-  };
-
-  const s: Record<string, React.CSSProperties> = {
-    page: {
-      minHeight: '100vh',
-      background: 'radial-gradient(ellipse at 50% 20%, #ffffff 0%, #f4f5f7 70%)',
-      padding: '0 0 60px',
-    },
-    topbar: {
-      position: 'sticky', top: 0, zIndex: 30,
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      padding: '12px 24px',
-      background: 'rgba(255,255,255,0.88)', backdropFilter: 'blur(16px)',
-      borderBottom: '1px solid var(--glass-border)',
-    },
-    content: { maxWidth: 680, margin: '0 auto', padding: '32px 24px' },
-    card: {
-      background: 'var(--glass)', backdropFilter: 'var(--blur)',
-      border: '1px solid var(--glass-border)', borderRadius: 10,
-      overflow: 'hidden', marginBottom: 16,
-    },
-    cardHeader: {
-      padding: '14px 18px', borderBottom: '1px solid var(--glass-border)',
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    },
-    row: {
-      padding: '14px 18px', borderBottom: '1px solid var(--glass-border)',
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      gap: 12,
-    },
-    input: {
-      width: '100%', padding: '11px 14px',
-      background: 'rgba(0,0,0,0.03)', border: '1px solid var(--glass-border)',
-      borderRadius: 6, fontFamily: 'var(--mono)', fontSize: 12,
-      color: 'var(--text)', outline: 'none',
-    },
-    btn: {
-      fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700,
-      letterSpacing: 1, padding: '9px 16px', borderRadius: 5,
-      border: 'none', transition: 'all 0.15s',
-    },
-  };
-
   return (
-    <div style={s.page}>
-      {/* Top bar */}
-      <div style={s.topbar}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <img src="/aegis-logo.png" alt="AEGIS" style={{ height: 18 }} />
-          <span style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-muted)', letterSpacing: 2 }}>
-            WATCHER
-          </span>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          <button
-            onClick={() => router.push('/dashboard')}
-            style={{ ...s.btn, color: 'var(--text-dim)', background: 'rgba(0,0,0,0.04)' }}
-          >← DASHBOARD</button>
-          <button
-            onClick={handleLogout}
-            style={{ ...s.btn, color: 'var(--red)', background: 'var(--red-dim)' }}
-          >LOG OUT</button>
-        </div>
-      </div>
+    <div style={{ minHeight: '100vh', background: 'var(--bg)', paddingBottom: 60 }}>
+      <AppTopBar variant="static" />
 
-      <div style={s.content}>
+      <div style={{ maxWidth: 640, margin: '0 auto', padding: '32px 20px' }}>
         {/* Header */}
-        <div style={{ marginBottom: 28 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 800, marginBottom: 6 }}>My Passengers</h1>
-          <p style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.5 }}>
-            Manage who you're watching. Add a passenger by their Aegis ID (shown in the app
-            after they complete setup). You'll see their incidents on the dashboard in real time.
+        <div style={{ marginBottom: 26 }}>
+          <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--blue)', marginBottom: 6 }}>My passengers</h1>
+          <p style={{ fontSize: 14, color: 'var(--text-dim)', lineHeight: 1.6 }}>
+            Manage who you are watching. Add a passenger by their Aegis ID, shown in
+            the app after they complete setup. You will see their incidents on the
+            dashboard in real time.
           </p>
           {user && (
             <div style={{
-              marginTop: 10, display: 'inline-block',
-              fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: 1,
+              marginTop: 10, display: 'inline-block', fontSize: 12, fontWeight: 500,
               color: 'var(--text-muted)', background: 'rgba(0,0,0,0.04)',
-              padding: '4px 10px', borderRadius: 4,
+              padding: '5px 12px', borderRadius: 'var(--radius-pill)',
             }}>
-              LOGGED IN AS {user.email}
+              Logged in as {user.email}
             </div>
           )}
         </div>
 
-        {/* Add passenger form */}
-        <div style={s.card}>
-          <div style={s.cardHeader}>
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, letterSpacing: 2, color: 'var(--text-dim)' }}>
-              ADD PASSENGER
-            </span>
+        {/* Add passenger card */}
+        <div style={{
+          background: '#fff', border: '1px solid var(--border)', borderRadius: 'var(--radius)',
+          overflow: 'hidden', marginBottom: 16,
+        }}>
+          <div style={{
+            padding: '14px 18px', borderBottom: '1px solid var(--border)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Add passenger</span>
             <button
               onClick={() => { setShowForm((v) => !v); setAddError(''); }}
-              style={{ ...s.btn, color: 'var(--red)', background: 'var(--red-dim)' }}
-            >
-              {showForm ? 'CANCEL' : '+ ADD'}
-            </button>
+              style={{
+                fontSize: 12, fontWeight: 700, color: 'var(--blue)',
+                background: 'var(--blue-dim)', border: 'none',
+                padding: '7px 16px', borderRadius: 'var(--radius-pill)',
+              }}
+            >{showForm ? 'Cancel' : 'Add'}</button>
           </div>
 
           {showForm && (
             <div style={{ padding: 18 }}>
-              <div style={{ marginBottom: 12 }}>
-                <label style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: 1.5, color: 'var(--text-muted)', marginBottom: 6 }}>
-                  PASSENGER ID *
+              <div style={{ marginBottom: 14 }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', marginBottom: 6 }}>
+                  Passenger ID
                 </label>
                 <input
-                  style={s.input}
+                  style={{
+                    width: '100%', padding: '11px 14px', fontSize: 14,
+                    background: 'var(--bg)', border: '1.5px solid var(--border)',
+                    borderRadius: 'var(--radius-sm)', outline: 'none', color: 'var(--text)',
+                  }}
                   value={newPassengerId}
                   onChange={(e) => setNewPassengerId(e.target.value)}
-                  placeholder="e.g. demo-passenger-001 or a UUID"
-                  onFocus={(e) => (e.target.style.borderColor = 'rgba(217,45,45,0.3)')}
-                  onBlur={(e) => (e.target.style.borderColor = 'rgba(0,0,0,0.08)')}
+                  placeholder="e.g. demo-passenger-001"
+                  onFocus={(e) => (e.target.style.borderColor = 'var(--blue)')}
+                  onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
                 />
               </div>
               <div style={{ marginBottom: 16 }}>
-                <label style={{ display: 'block', fontFamily: 'var(--mono)', fontSize: 9, letterSpacing: 1.5, color: 'var(--text-muted)', marginBottom: 6 }}>
-                  LABEL (optional)
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 600, color: 'var(--text-dim)', marginBottom: 6 }}>
+                  Label (optional)
                 </label>
                 <input
-                  style={s.input}
+                  style={{
+                    width: '100%', padding: '11px 14px', fontSize: 14,
+                    background: 'var(--bg)', border: '1.5px solid var(--border)',
+                    borderRadius: 'var(--radius-sm)', outline: 'none', color: 'var(--text)',
+                  }}
                   value={newLabel}
                   onChange={(e) => setNewLabel(e.target.value)}
                   placeholder="e.g. Mum, Ahmed, Sister"
-                  onFocus={(e) => (e.target.style.borderColor = 'rgba(217,45,45,0.3)')}
-                  onBlur={(e) => (e.target.style.borderColor = 'rgba(0,0,0,0.08)')}
+                  onFocus={(e) => (e.target.style.borderColor = 'var(--blue)')}
+                  onBlur={(e) => (e.target.style.borderColor = 'var(--border)')}
                   onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
                 />
               </div>
               {addError && (
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--red)', marginBottom: 12, letterSpacing: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--red)', marginBottom: 12 }}>
                   {addError}
                 </div>
               )}
@@ -246,32 +203,32 @@ export default function PassengersPage() {
                 onClick={handleAdd}
                 disabled={adding}
                 style={{
-                  ...s.btn, width: '100%', padding: '12px 0',
-                  color: '#fff', background: 'var(--text)',
-                  opacity: adding ? 0.5 : 1,
+                  width: '100%', padding: '12px 0', fontSize: 14, fontWeight: 700,
+                  color: '#fff', background: 'var(--blue)', border: 'none',
+                  borderRadius: 'var(--radius-sm)', opacity: adding ? 0.6 : 1,
                 }}
-              >
-                {adding ? 'ADDING...' : 'CONFIRM'}
-              </button>
+              >{adding ? 'Adding...' : 'Confirm'}</button>
             </div>
           )}
         </div>
 
         {/* Passenger list */}
-        <div style={s.card}>
-          <div style={s.cardHeader}>
-            <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, letterSpacing: 2, color: 'var(--text-dim)' }}>
-              WATCHING ({watchers.length})
+        <div style={{
+          background: '#fff', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden',
+        }}>
+          <div style={{ padding: '14px 18px', borderBottom: '1px solid var(--border)' }}>
+            <span style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
+              Watching ({watchers.length})
             </span>
           </div>
 
           {loading ? (
-            <div style={{ padding: 32, textAlign: 'center', fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-muted)', letterSpacing: 2 }}>
-              LOADING...
+            <div style={{ padding: 32, textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>
+              Loading...
             </div>
           ) : watchers.length === 0 ? (
             <div style={{ padding: 40, textAlign: 'center' }}>
-              <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--text-muted)', marginBottom: 8 }}>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-dim)', marginBottom: 6 }}>
                 No passengers yet
               </div>
               <div style={{ fontSize: 13, color: 'var(--text-muted)', lineHeight: 1.5 }}>
@@ -283,39 +240,47 @@ export default function PassengersPage() {
               <div
                 key={w.id}
                 style={{
-                  ...s.row,
-                  borderBottom: i < watchers.length - 1 ? '1px solid var(--glass-border)' : 'none',
+                  padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12,
+                  borderBottom: i < watchers.length - 1 ? '1px solid var(--border)' : 'none',
                 }}
               >
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 3 }}>
-                    {w.label || 'Unnamed Passenger'}
+                    {w.label || 'Unnamed passenger'}
                   </div>
-                  <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-muted)', letterSpacing: 0.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-muted)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     ID: {w.passenger_id}
                   </div>
-                  <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-muted)', marginTop: 3, letterSpacing: 0.5 }}>
+                  <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 3 }}>
                     Added {new Date(w.created_at).toLocaleDateString()}
                   </div>
                 </div>
                 <div style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
                   <button
                     onClick={() => router.push(`/dashboard?passenger=${w.passenger_id}`)}
-                    style={{ ...s.btn, color: 'var(--blue)', background: 'var(--blue-dim)' }}
-                  >VIEW</button>
+                    style={{
+                      fontSize: 12, fontWeight: 700, color: 'var(--blue)',
+                      background: 'var(--blue-dim)', border: 'none',
+                      padding: '8px 14px', borderRadius: 'var(--radius-pill)',
+                    }}
+                  >View</button>
                   <button
                     onClick={() => handleRemove(w.id)}
-                    style={{ ...s.btn, color: 'var(--red)', background: 'var(--red-dim)' }}
-                  >REMOVE</button>
+                    style={{
+                      fontSize: 12, fontWeight: 700, color: 'var(--red)',
+                      background: 'var(--red-dim)', border: 'none',
+                      padding: '8px 14px', borderRadius: 'var(--radius-pill)',
+                    }}
+                  >Remove</button>
                 </div>
               </div>
             ))
           )}
         </div>
 
-        <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-muted)', lineHeight: 1.6, padding: '0 4px' }}>
+        <div style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.6, padding: '0 4px', marginTop: 16 }}>
           The passenger's Aegis ID appears in the app after they complete the setup screen.
-          In mock mode the demo ID is <code style={{ background: 'rgba(0,0,0,0.05)', padding: '1px 5px', borderRadius: 3 }}>demo-passenger-001</code>.
+          In demo mode the sample ID is <code style={{ background: 'rgba(0,0,0,0.05)', padding: '1px 6px', borderRadius: 4, fontFamily: 'var(--mono)' }}>demo-passenger-001</code>.
         </div>
       </div>
     </div>
