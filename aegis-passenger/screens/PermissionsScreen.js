@@ -53,3 +53,58 @@ export default function PermissionsScreen({ onGranted }) {
 
       <View style={styles.card}>
         <Text style={styles.heading}>Two permissions needed</Text>
+
+        <View style={styles.row}>
+          <Text style={styles.icon}>🎙</Text>
+          <View style={styles.rowText}>
+            <Text style={styles.permTitle}>Microphone</Text>
+            <Text style={styles.permDesc}>
+              Detects distress sounds silently in the background.
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.row}>
+          <Text style={styles.icon}>📍</Text>
+          <View style={styles.rowText}>
+            <Text style={styles.permTitle}>Location</Text>
+            <Text style={styles.permDesc}>
+              Sends your coordinates to watchers during an emergency.
+            </Text>
+          </View>
+        </View>
+      </View>
+
+      <TouchableOpacity
+        style={[styles.btn, requesting && styles.btnDisabled]}
+        onPress={requestAll}
+        disabled={requesting}
+        activeOpacity={0.8}
+      >
+        <Text style={styles.btnText}>
+          {requesting ? 'Requesting...' : 'Grant Access'}
+        </Text>
+      </TouchableOpacity>
+
+      <Text style={styles.footer}>
+        Your data never leaves Aegis. We only share your location with your
+        chosen watcher during an active emergency.
+      </Text>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.black,
+    justifyContent: 'center',
+    padding: SPACING.lg,
+  },
+  logo: {
+    width: 180,
+    height: 60,
+    alignSelf: 'center',
+    marginBottom: SPACING.xl,
+    tintColor: COLORS.white,
+  },
