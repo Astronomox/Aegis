@@ -1,0 +1,10 @@
+node_modules/
+.expo/
+.next/
+dist/
+out/
+web-build/
+.env
+.env.local
+*.log
+.DS_Store
