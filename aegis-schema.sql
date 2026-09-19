@@ -21,3 +21,26 @@ create table if not exists watchers (
 
 -- 3. INCIDENTS (the core table both apps read/write)
 create table if not exists incidents (
+  id uuid primary key default gen_random_uuid(),
+  passenger_id uuid references users(id),
+  latitude float not null,
+  longitude float not null,
+  trigger_type text not null check (trigger_type in ('manual', 'audio')),
+  audio_url text,
+  status text not null default 'active' check (status in ('active', 'resolved')),
+  created_at timestamptz default now()
+);
+
+-- Required for realtime UPDATE events to include full row data
+alter table incidents replica identity full;
+
+-- ============================================
+-- ENABLE REALTIME on incidents
+-- (Supabase dashboard: Database > Replication > toggle "incidents" on
+--  OR run this if using the SQL-based publication approach)
+-- ============================================
+alter publication supabase_realtime add table incidents;
+
+-- ============================================
+-- ROW LEVEL SECURITY
+-- For hackathon speed: open policies (tighten later for production)
