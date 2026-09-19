@@ -12,3 +12,10 @@ export async function getLocation() {
     });
     return {
       latitude: loc.coords.latitude,
+      longitude: loc.coords.longitude,
+    };
+  } catch (e) {
+    console.log('[location] fallback:', e.message);
+    return FALLBACK;
+  }
+}
