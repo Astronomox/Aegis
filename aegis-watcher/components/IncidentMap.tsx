@@ -88,11 +88,11 @@ export default function IncidentMap({ incidents, trips = [], onMarkerClick }: Pr
         className: '',
         html: isActive
           ? `<div style="position:relative;width:${size}px;height:${size}px;">
-              <div style="position:absolute;inset:0;border-radius:50%;border:2px solid rgba(224,64,64,0.6);animation:radar 2s ease-out infinite;"></div>
-              <div style="position:absolute;inset:0;border-radius:50%;border:1px solid rgba(224,64,64,0.3);animation:radar 2s ease-out infinite 0.6s;"></div>
-              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:#DC2626;border:2.5px solid #fff;box-shadow:0 2px 10px rgba(220,38,38,0.5);"></div>
+              <div style="position:absolute;inset:0;border-radius:50%;border:2px solid rgba(201,48,44,0.6);animation:radar 2s ease-out infinite;"></div>
+              <div style="position:absolute;inset:0;border-radius:50%;border:1px solid rgba(201,48,44,0.3);animation:radar 2s ease-out infinite 0.6s;"></div>
+              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:14px;height:14px;border-radius:50%;background:#c9302c;border:2.5px solid #ffffff;box-shadow:0 2px 10px rgba(201,48,44,0.5);"></div>
             </div>`
-          : `<div style="width:10px;height:10px;border-radius:50%;background:#64748B;opacity:0.4;border:2px solid #fff;"></div>`,
+          : `<div style="width:10px;height:10px;border-radius:50%;background:#9e9890;opacity:0.4;border:2px solid #ffffff;"></div>`,
         iconSize: [size, size],
         iconAnchor: [size / 2, size / 2],
       });
@@ -101,12 +101,12 @@ export default function IncidentMap({ incidents, trips = [], onMarkerClick }: Pr
       if (onMarkerClick) marker.on('click', () => onMarkerClick(inc.id, 'incident'));
 
       marker.bindTooltip(
-        `<div style="font-family:'Inter',sans-serif;font-size:12px;line-height:1.5;padding:2px 0;">
-          <div style="font-weight:800;color:${isActive ? '#DC2626' : '#64748B'};font-size:11px;margin-bottom:2px;">
+        `<div style="font-family:'Geist Sans',-apple-system,sans-serif;font-size:12px;line-height:1.5;padding:2px 0;">
+          <div style="font-weight:800;color:${isActive ? '#c9302c' : '#9e9890'};font-size:11px;margin-bottom:2px;">
             🚨 ${isActive ? 'SOS DISTRESS SIGNAL' : 'Resolved Alert'}
           </div>
-          <div style="font-size:12px;font-weight:700;color:#0F172A;">Passenger ID: ${inc.passenger_id}</div>
-          <div style="font-family:monospace;font-size:11px;color:#475569;margin-top:2px;">GPS: ${inc.latitude.toFixed(4)}, ${inc.longitude.toFixed(4)}</div>
+          <div style="font-size:12px;font-weight:700;color:#2c2924;">Passenger ID: ${inc.passenger_id}</div>
+          <div style="font-family:monospace;font-size:11px;color:#6b6560;margin-top:2px;">GPS: ${inc.latitude.toFixed(4)}, ${inc.longitude.toFixed(4)}</div>
         </div>`,
         { className: 'aegis-tooltip', direction: 'top', offset: [0, isActive ? -20 : -8] }
       );
@@ -118,13 +118,13 @@ export default function IncidentMap({ incidents, trips = [], onMarkerClick }: Pr
     tripList.forEach((trip) => {
       const isActive = trip.status === 'active';
       const isAlert = trip.status === 'alert';
-      const color = isAlert ? '#EF4444' : isActive ? '#10B981' : '#64748B';
+      const color = isAlert ? '#c9302c' : isActive ? '#3da35a' : '#9e9890';
       const size = 32;
 
       const icon = L.divIcon({
         className: '',
-        html: `<div style="position:relative;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;background:${color};border-radius:50%;border:3px solid #fff;box-shadow:0 3px 12px rgba(0,0,0,0.25);">
-                <span style="color:#fff;font-size:14px;">🚌</span>
+        html: `<div style="position:relative;width:${size}px;height:${size}px;display:flex;align-items:center;justify-content:center;background:${color};border-radius:50%;border:3px solid #ffffff;box-shadow:0 3px 12px rgba(0,0,0,0.25);">
+                <span style="color:#ffffff;font-size:14px;">🚌</span>
               </div>`,
         iconSize: [size, size],
         iconAnchor: [size / 2, size / 2],
@@ -134,13 +134,13 @@ export default function IncidentMap({ incidents, trips = [], onMarkerClick }: Pr
       if (onMarkerClick) marker.on('click', () => onMarkerClick(trip.id, 'trip'));
 
       marker.bindTooltip(
-        `<div style="font-family:'Inter',sans-serif;font-size:12px;line-height:1.5;padding:2px 0;">
+        `<div style="font-family:'Geist Sans',-apple-system,sans-serif;font-size:12px;line-height:1.5;padding:2px 0;">
           <div style="font-weight:800;color:${color};font-size:11px;margin-bottom:2px;">
             ${isAlert ? '⚠️ MISSED CHECKOUT' : isActive ? '🟢 ACTIVE BUS TRIP' : '✓ ARRIVED SAFELY'}
           </div>
-          <div style="font-size:13px;font-weight:700;color:#0F172A;">${trip.passenger_name}</div>
-          <div style="font-size:11px;color:#334155;margin-top:2px;">Route: ${trip.bus_route}</div>
-          <div style="font-size:10px;color:#64748B;">Bus: ${trip.vehicle_id || 'N/A'}</div>
+          <div style="font-size:13px;font-weight:700;color:#2c2924;">${trip.passenger_name}</div>
+          <div style="font-size:11px;color:#6b6560;margin-top:2px;">Route: ${trip.bus_route}</div>
+          <div style="font-size:10px;color:#9e9890;">Bus: ${trip.vehicle_id || 'N/A'}</div>
         </div>`,
         { className: 'aegis-tooltip', direction: 'top', offset: [0, -18] }
       );
@@ -169,11 +169,11 @@ export default function IncidentMap({ incidents, trips = [], onMarkerClick }: Pr
           100% { transform: scale(2.8); opacity: 0; }
         }
         .aegis-tooltip {
-          background: #fff !important;
-          border: 1px solid rgba(15,23,42,0.12) !important;
+          background: #ffffff !important;
+          border: 1px solid rgba(0,0,0,0.08) !important;
           border-radius: 12px !important;
           padding: 10px 14px !important;
-          box-shadow: 0 4px 20px rgba(0,0,0,0.12) !important;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
         }
         .aegis-tooltip::before, .leaflet-tooltip-top::before { display: none !important; }
         .leaflet-control-attribution, .leaflet-control-container .leaflet-bottom { display: none !important; }

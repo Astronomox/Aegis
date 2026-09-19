@@ -1,42 +1,42 @@
-/* Hallmark · tokens.css · theme: Cobalt · genre: modern-minimal
- * Utilitarian dashboard palette — dark-tinted, cool neutrals, electric blue accent
+/* Hallmark · tokens.css · theme: Coral (light warm-grey) · genre: modern-minimal
+ * Utilitarian dashboard palette — light warm-grey paper, coral accent
  * All values OKLCH — no inline hex/rgb/hsl permitted in consuming files
  */
 
 :root {
-  /* ── Paper (dark-tinted, hue 250) ── */
-  --color-paper:       oklch(13% 0.012 250);
-  --color-paper-raised: oklch(16% 0.014 250);
-  --color-paper-overlay: oklch(19% 0.016 250);
-  --color-paper-hover: oklch(22% 0.015 250);
+  /* ── Paper (light warm-grey) ── */
+  --color-paper:          oklch(97% 0.005 85);
+  --color-paper-raised:   oklch(100% 0 0);
+  --color-paper-overlay:  oklch(95% 0.005 85);
+  --color-paper-hover:    oklch(93% 0.008 85);
 
   /* ── Ink ── */
-  --color-ink:         oklch(95% 0.005 250);
-  --color-ink-muted:   oklch(65% 0.01 250);
-  --color-ink-faint:   oklch(45% 0.01 250);
+  --color-ink:            oklch(18% 0.01 85);
+  --color-ink-muted:      oklch(42% 0.01 85);
+  --color-ink-faint:      oklch(62% 0.008 85);
 
-  /* ── Accent (electric blue, hue 260) ── */
-  --color-accent:      oklch(72% 0.19 260);
-  --color-accent-dim:  oklch(45% 0.12 260);
-  --color-accent-bright: oklch(80% 0.22 260);
-  --color-focus:       oklch(72% 0.19 260);
+  /* ── Accent (coral/vermillion, hue 18) ── */
+  --color-accent:         oklch(65% 0.2 18);
+  --color-accent-dim:     oklch(95% 0.03 18);
+  --color-accent-bright:  oklch(72% 0.22 18);
+  --color-focus:          oklch(65% 0.2 18);
 
   /* ── Status ── */
-  --color-safe:        oklch(75% 0.19 145);
-  --color-safe-dim:    oklch(35% 0.1 145);
-  --color-warn:        oklch(78% 0.16 75);
-  --color-warn-dim:    oklch(35% 0.1 75);
-  --color-danger:      oklch(65% 0.22 25);
-  --color-danger-dim:  oklch(30% 0.12 25);
+  --color-safe:           oklch(62% 0.17 155);
+  --color-safe-dim:       oklch(95% 0.03 155);
+  --color-warn:           oklch(72% 0.16 75);
+  --color-warn-dim:       oklch(95% 0.04 75);
+  --color-danger:         oklch(58% 0.22 25);
+  --color-danger-dim:     oklch(95% 0.04 25);
 
   /* ── Rules ── */
-  --color-rule:        oklch(25% 0.012 250);
-  --color-rule-strong: oklch(35% 0.015 250);
+  --color-rule:           oklch(90% 0.008 85);
+  --color-rule-strong:    oklch(82% 0.01 85);
 
   /* ── Typography ── */
-  --font-display:      "Geist Sans", -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-body:         "Geist Sans", -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono:         "JetBrains Mono", "SF Mono", Consolas, monospace;
+  --font-display:         "Geist Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-body:            "Geist Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono:            "JetBrains Mono", "SF Mono", Consolas, monospace;
 
   /* ── Type scale ── */
   --text-xs:    0.6875rem;
@@ -65,9 +65,9 @@
   --radius-pill: 100px;
 
   /* ── Shadows ── */
-  --shadow-sm:  0 1px 2px oklch(5% 0.01 250 / 0.5);
-  --shadow-md:  0 4px 12px oklch(5% 0.01 250 / 0.4);
-  --shadow-lg:  0 8px 24px oklch(5% 0.01 250 / 0.35);
+  --shadow-sm:  0 1px 2px oklch(0% 0 0 / 0.04);
+  --shadow-md:  0 4px 12px oklch(0% 0 0 / 0.06);
+  --shadow-lg:  0 8px 24px oklch(0% 0 0 / 0.08);
 
   /* ── Easing ── */
   --ease-out:   cubic-bezier(0.16, 1, 0.3, 1);

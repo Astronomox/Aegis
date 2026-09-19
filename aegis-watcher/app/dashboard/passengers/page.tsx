@@ -284,7 +284,7 @@ export default function PassengersPage() {
                   key={w.id}
                   style={{
                     background: 'var(--color-paper-raised)', border: '1px solid var(--color-rule)',
-                    borderRadius: 'var(--radius-md)', padding: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.03)',
+                    borderRadius: 'var(--radius-md)', padding: 20, boxShadow: 'var(--shadow-sm)',
                   }}
                 >
                   {/* Passenger Header */}
@@ -309,7 +309,7 @@ export default function PassengersPage() {
                         onClick={() => router.push(`/dashboard?passenger=${w.passenger_id}`)}
                         style={{
                           fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-mono)',
-                          color: '#fff', background: '#2563EB', border: 'none',
+                          color: 'var(--color-paper-raised)', background: 'var(--color-accent)', border: 'none',
                           padding: '7px 14px', borderRadius: 8, cursor: 'pointer',
                         }}
                       >📍 View on Map</button>
@@ -317,7 +317,7 @@ export default function PassengersPage() {
                         onClick={() => handleRemove(w.id)}
                         style={{
                           fontSize: 12, fontWeight: 700, fontFamily: 'var(--font-mono)',
-                          color: '#EF4444', background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)',
+                          color: 'var(--color-danger)', background: 'var(--color-danger-dim)', border: '1px solid var(--color-danger)',
                           padding: '7px 12px', borderRadius: 8, cursor: 'pointer',
                         }}
                       >Remove</button>
@@ -342,12 +342,12 @@ export default function PassengersPage() {
                       <div style={{ fontSize: 10, fontWeight: 800, color: 'var(--color-ink-faint)', letterSpacing: 1 }}>HEALTH & ACCESSIBILITY</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 4 }}>
                         {(profile.health_conditions || []).map((h) => (
-                          <span key={h} style={{ fontSize: 10, fontWeight: 700, color: '#38BDF8', backgroundColor: 'rgba(56, 189, 248, 0.15)', padding: '2px 8px', borderRadius: 6 }}>
+                           <span key={h} style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-accent)', backgroundColor: 'var(--color-accent-dim)', padding: '2px 8px', borderRadius: 6 }}>
                             🏥 {h}
                           </span>
                         ))}
                         {(profile.disabilities || []).map((d) => (
-                          <span key={d} style={{ fontSize: 10, fontWeight: 700, color: '#F59E0B', backgroundColor: 'rgba(245, 158, 11, 0.15)', padding: '2px 8px', borderRadius: 6 }}>
+                           <span key={d} style={{ fontSize: 10, fontWeight: 700, color: 'var(--color-warn)', backgroundColor: 'var(--color-warn-dim)', padding: '2px 8px', borderRadius: 6 }}>
                             ♿ {d}
                           </span>
                         ))}
@@ -378,13 +378,13 @@ export default function PassengersPage() {
                             key={inc.id}
                             style={{
                               padding: 10, borderRadius: 8,
-                              backgroundColor: inc.status === 'active' ? 'rgba(239, 68, 68, 0.1)' : 'var(--color-paper)',
-                              border: inc.status === 'active' ? '1px solid #EF4444' : '1px solid var(--color-rule)',
+                               backgroundColor: inc.status === 'active' ? 'var(--color-danger-dim)' : 'var(--color-paper)',
+                               border: inc.status === 'active' ? '1px solid var(--color-danger)' : '1px solid var(--color-rule)',
                               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                             }}
                           >
                             <div>
-                              <span style={{ fontSize: 11, fontWeight: 800, color: inc.status === 'active' ? '#EF4444' : '#10B981' }}>
+                               <span style={{ fontSize: 11, fontWeight: 800, color: inc.status === 'active' ? 'var(--color-danger)' : 'var(--color-safe)' }}>
                                 {inc.trigger_type === 'audio' ? '🎤 SOUND DECIBEL TRIGGER (>85dB)' : '🚨 ONE-TAP MANUAL SOS'}
                               </span>
                               <div style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--color-ink-muted)', marginTop: 2 }}>
@@ -395,7 +395,7 @@ export default function PassengersPage() {
                               href={`https://www.google.com/maps?q=${inc.latitude},${inc.longitude}`}
                               target="_blank"
                               rel="noreferrer"
-                              style={{ fontSize: 11, fontWeight: 700, color: '#2563EB', textDecoration: 'underline' }}
+                               style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-accent)', textDecoration: 'underline' }}
                             >Open Map ➔</a>
                           </div>
                         ))}
@@ -410,7 +410,7 @@ export default function PassengersPage() {
                             }}
                           >
                             <div>
-                              <span style={{ fontSize: 11, fontWeight: 800, color: trip.status === 'alert' ? '#EF4444' : '#10B981' }}>
+                               <span style={{ fontSize: 11, fontWeight: 800, color: trip.status === 'alert' ? 'var(--color-danger)' : 'var(--color-safe)' }}>
                                 🚌 {trip.status === 'alert' ? '⏱️ MISSED CHECKOUT ALERT' : 'SAFE TRIP CHECK-IN'}
                               </span>
                               <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--color-ink)', marginTop: 2 }}>

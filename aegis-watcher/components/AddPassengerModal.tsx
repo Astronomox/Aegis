@@ -50,21 +50,21 @@ export default function AddPassengerModal({ isOpen, onClose, onSuccess }: AddPas
       display: 'flex', alignItems: 'center', justifyContent: 'center',
     }}>
       <div style={{
-        background: '#fff', borderRadius: 'var(--radius)',
+        background: 'var(--color-paper-raised)', borderRadius: 'var(--radius-lg)',
         padding: '24px', width: '100%', maxWidth: '400px',
-        boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+        boxShadow: 'var(--shadow-lg)',
       }}>
         <h2 style={{ margin: '0 0 16px', fontSize: 18, fontWeight: 600 }}>
           Add Passenger
         </h2>
         
-        <p style={{ margin: '0 0 20px', fontSize: 14, color: 'var(--text-dim)' }}>
+        <p style={{ margin: '0 0 20px', fontSize: 14, color: 'var(--color-ink-muted)' }}>
           Enter the 6-digit pairing code from the passenger app to start monitoring them.
         </p>
 
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: 16 }}>
-            <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 500 }}>
+            <label style={{ display: 'block', marginBottom: 8, fontSize: 13, fontWeight: 500, color: 'var(--color-ink)' }}>
               Pairing Code
             </label>
             <input
@@ -75,7 +75,7 @@ export default function AddPassengerModal({ isOpen, onClose, onSuccess }: AddPas
               maxLength={6}
               style={{
                 width: '100%', padding: '10px 12px',
-                border: '1px solid var(--border)', borderRadius: 'var(--radius)',
+                border: '1px solid var(--color-rule)', borderRadius: 'var(--radius-lg)',
                 fontSize: 16, fontWeight: 600, letterSpacing: 2,
                 textTransform: 'uppercase',
               }}
@@ -85,8 +85,8 @@ export default function AddPassengerModal({ isOpen, onClose, onSuccess }: AddPas
           {error && (
             <div style={{
               marginBottom: 16, padding: '10px 12px',
-              background: 'var(--red-dim)', color: 'var(--red)',
-              borderRadius: 'var(--radius)', fontSize: 13,
+              background: 'var(--color-danger-dim)', color: 'var(--color-danger)',
+              borderRadius: 'var(--radius-lg)', fontSize: 13,
             }}>
               {error}
             </div>
@@ -98,8 +98,8 @@ export default function AddPassengerModal({ isOpen, onClose, onSuccess }: AddPas
               onClick={onClose}
               disabled={loading}
               style={{
-                padding: '10px 20px', borderRadius: 'var(--radius)',
-                border: '1px solid var(--border)', background: '#fff',
+                padding: '10px 20px', borderRadius: 'var(--radius-lg)',
+                border: '1px solid var(--color-rule)', background: 'var(--color-paper-raised)',
                 fontSize: 14, fontWeight: 500, cursor: loading ? 'not-allowed' : 'pointer',
               }}
             >
@@ -109,8 +109,8 @@ export default function AddPassengerModal({ isOpen, onClose, onSuccess }: AddPas
               type="submit"
               disabled={loading || code.length !== 6}
               style={{
-                padding: '10px 20px', borderRadius: 'var(--radius)',
-                border: 'none', background: 'var(--green)', color: '#fff',
+                padding: '10px 20px', borderRadius: 'var(--radius-lg)',
+                border: 'none', background: 'var(--color-safe)', color: 'var(--color-paper-raised)',
                 fontSize: 14, fontWeight: 600, cursor: loading || code.length !== 6 ? 'not-allowed' : 'pointer',
                 opacity: loading || code.length !== 6 ? 0.6 : 1,
               }}

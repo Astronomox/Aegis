@@ -104,24 +104,24 @@ export default function LandingMapPreview() {
       {!ready && (
         <div style={{
           position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center',
-          background: '#eef0f3', fontSize: 12, color: 'var(--text-muted)',
+          background: 'var(--color-paper-overlay)', fontSize: 12, color: 'var(--color-ink-faint)',
         }}>Loading map...</div>
       )}
 
       <div style={{
         position: 'absolute', bottom: 16, left: 16, zIndex: 500,
-        background: '#fff', borderRadius: 10, padding: '8px 14px',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.1)',
+        background: 'var(--color-paper-raised)', borderRadius: 10, padding: '8px 14px',
+        boxShadow: 'var(--shadow-md)',
         display: 'flex', alignItems: 'center', gap: 8,
       }}>
-        <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--green-dark)', animation: 'landingPulse 1.5s infinite' }} />
-        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text)' }}>Live monitoring active</span>
+        <div style={{ width: 7, height: 7, borderRadius: '50%', background: 'var(--color-safe)', animation: 'landingPulse 1.5s infinite' }} />
+        <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--color-ink)' }}>Live monitoring active</span>
       </div>
 
       <div style={{
         position: 'absolute', top: 16, right: 16, zIndex: 500,
-        fontSize: 10, fontWeight: 600, color: 'var(--text-muted)', letterSpacing: 1,
-        background: 'rgba(255,255,255,0.85)', padding: '4px 10px', borderRadius: 6,
+        fontSize: 10, fontWeight: 600, color: 'var(--color-ink-faint)', letterSpacing: 1,
+        background: 'var(--color-paper-raised)', opacity: 0.85, padding: '4px 10px', borderRadius: 6,
       }}>LAGOS, NIGERIA</div>
 
       <style>{`
@@ -137,11 +137,11 @@ export default function LandingMapPreview() {
           opacity: 0;
         }
         .landing-map-ring-red {
-          border: 2px solid #E04040;
+          border: 2px solid oklch(58% 0.22 25);
           animation-name: ringRed;
         }
         .landing-map-ring-green {
-          border: 2px solid #8BBF10;
+          border: 2px solid oklch(62% 0.17 155);
           animation-name: ringGreen;
         }
         @keyframes ringRed {
@@ -158,15 +158,15 @@ export default function LandingMapPreview() {
         .landing-map-core {
           position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
           width: 10px; height: 10px; border-radius: 50%;
-          border: 2px solid #fff;
+          border: 2px solid oklch(100% 0 0);
           box-shadow: 0 2px 6px rgba(0,0,0,0.2);
           animation-name: coreColor;
           animation-duration: 4s;
           animation-iteration-count: infinite;
         }
         @keyframes coreColor {
-          0%, 45% { background: #E04040; }
-          55%, 100% { background: #8BBF10; }
+          0%, 45% { background: oklch(58% 0.22 25); }
+          55%, 100% { background: oklch(62% 0.17 155); }
         }
       `}</style>
     </div>
