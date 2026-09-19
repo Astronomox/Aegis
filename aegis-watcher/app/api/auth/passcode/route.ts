@@ -12,3 +12,10 @@ export async function POST(req: NextRequest) {
   response.cookies.set('aegis-session', 'authenticated', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
+    sameSite: 'lax',
+    maxAge: 60 * 60 * 8, // 8 hours, lasts the entire hackathon day
+    path: '/',
+  });
+
+  return response;
+}
