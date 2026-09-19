@@ -69,4 +69,17 @@ export interface DangerZone {
   advisory: string;
 }
 
+export interface PassengerProfile {
+  id: string;
+  passenger_id: string;
+  name: string;
+  emergency_contact_name?: string;
+  emergency_contact_phone?: string;
+  health_conditions?: string[];
+  disabilities?: string[];
+  pairing_code?: string;
+  created_at: string;
+}
+
+
 

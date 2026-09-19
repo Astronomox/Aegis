@@ -70,51 +70,11 @@ begin
   end if;
 end $$;
 
--- ============================================
--- ROW LEVEL SECURITY
--- ============================================
+-- Disable RLS completely for demo
+alter table incidents disable row level security;
+alter table watchers disable row level security;
+alter table pairing_codes disable row level security;
 
-alter table incidents enable row level security;
-alter table watchers enable row level security;
-alter table pairing_codes enable row level security;
-
--- Incidents: Public read for demo, authenticated write
-drop policy if exists "Incidents: Public read" on incidents;
-drop policy if exists "Incidents: Authenticated insert" on incidents;
-drop policy if exists "Incidents: Authenticated update" on incidents;
-drop policy if exists "Incidents: Public insert" on incidents;
-drop policy if exists "Incidents: Public update" on incidents;
-
-create policy "Incidents: Public read" on incidents for select using (true);
-create policy "Incidents: Public insert" on incidents for insert with check (true);
-create policy "Incidents: Public update" on incidents for update using (true);
-
--- Watchers: Public access for demo
-drop policy if exists "Watchers: Authenticated read" on watchers;
-drop policy if exists "Watchers: Authenticated insert" on watchers;
-drop policy if exists "Watchers: Authenticated update" on watchers;
-drop policy if exists "Watchers: Authenticated delete" on watchers;
-drop policy if exists "Watchers: Public select" on watchers;
-drop policy if exists "Watchers: Public insert" on watchers;
-drop policy if exists "Watchers: Public update" on watchers;
-drop policy if exists "Watchers: Public delete" on watchers;
-
-create policy "Watchers: Public select" on watchers for select using (true);
-create policy "Watchers: Public insert" on watchers for insert with check (true);
-create policy "Watchers: Public update" on watchers for update using (true);
-create policy "Watchers: Public delete" on watchers for delete using (true);
-
--- Pairing Codes: Public access for demo
-drop policy if exists "Pairing Codes: Public insert" on pairing_codes;
-drop policy if exists "Pairing Codes: Authenticated read" on pairing_codes;
-drop policy if exists "Pairing Codes: Authenticated update" on pairing_codes;
-drop policy if exists "Pairing Codes: Public select" on pairing_codes;
-drop policy if exists "Pairing Codes: Public update" on pairing_codes;
-
-create policy "Pairing Codes: Public insert" on pairing_codes for insert with check (true);
-create policy "Pairing Codes: Public select" on pairing_codes for select using (true);
-create policy "Pairing Codes: Public update" on pairing_codes for update using (true);
-create policy "Pairing Codes: Public delete" on pairing_codes for delete using (true);
 
 
 -- ============================================
@@ -195,25 +155,10 @@ begin
   end if;
 end $$;
 
--- Row Level Security Policies
-alter table trips enable row level security;
-alter table companies enable row level security;
-alter table fleet_vehicles enable row level security;
+-- Disable RLS on trips, companies, and fleet_vehicles for demo
+alter table trips disable row level security;
+alter table companies disable row level security;
+alter table fleet_vehicles disable row level security;
 
-drop policy if exists "Trips: Public read" on trips;
-drop policy if exists "Trips: Public insert" on trips;
-drop policy if exists "Trips: Public update" on trips;
-drop policy if exists "Trips: Public delete" on trips;
-
-create policy "Trips: Public read" on trips for select using (true);
-create policy "Trips: Public insert" on trips for insert with check (true);
-create policy "Trips: Public update" on trips for update using (true);
-create policy "Trips: Public delete" on trips for delete using (true);
-
-drop policy if exists "Companies: Public read" on companies;
-create policy "Companies: Public read" on companies for select using (true);
-
-drop policy if exists "Fleet Vehicles: Public read" on fleet_vehicles;
-create policy "Fleet Vehicles: Public read" on fleet_vehicles for select using (true);
 
 

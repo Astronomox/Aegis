@@ -14,11 +14,11 @@ const PAGE_SIZE = 10;
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60000);
-  if (mins < 1) return 'just now';
-  if (mins < 60) return `${mins}m ago`;
+  if (mins < 1) return 'now';
+  if (mins < 60) return `${mins}m`;
   const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  return `${Math.floor(hrs / 24)}d ago`;
+  if (hrs < 24) return `${hrs}h`;
+  return `${Math.floor(hrs / 24)}d`;
 }
 
 function HistoryPageInner() {
@@ -55,60 +55,68 @@ function HistoryPageInner() {
   const totalPages = Math.ceil(total / PAGE_SIZE);
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)', overflowY: 'auto' }}>
+    <div style={{ minHeight: '100vh', background: 'var(--color-paper)', overflowY: 'auto' }}>
       <AppTopBar variant="static" />
-      <div style={{ maxWidth: 640, margin: '0 auto', padding: isMobile ? '16px' : '32px 24px' }}>
+      <div style={{ maxWidth: 600, margin: '0 auto', padding: isMobile ? '16px' : '24px 20px' }}>
         <BackToDashboardLink />
 
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 800, color: 'var(--blue)' }}>History</h1>
-          <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-muted)' }}>{total} resolved</span>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
+          <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 600, color: 'var(--color-ink)', fontFamily: 'var(--font-display)', letterSpacing: '-0.02em' }}>History</h1>
+          <span style={{ fontSize: 'var(--text-xs)', fontWeight: 600, fontFamily: 'var(--font-mono)', color: 'var(--color-ink-faint)' }}>{total} resolved</span>
         </div>
 
         <div style={{
-          background: '#fff', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden',
+          background: 'var(--color-paper-raised)', border: '1px solid var(--color-rule)',
+          borderRadius: 'var(--radius-md)', overflow: 'hidden',
         }}>
           {loading ? (
-            <div style={{ padding: 48, textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>Loading...</div>
+            <div style={{ padding: 40, textAlign: 'center', fontSize: 'var(--text-sm)', color: 'var(--color-ink-faint)', fontFamily: 'var(--font-mono)' }}>Loading...</div>
           ) : incidents.length === 0 ? (
-            <div style={{ padding: 48, textAlign: 'center', fontSize: 13, color: 'var(--text-muted)' }}>No resolved incidents yet</div>
+            <div style={{ padding: 40, textAlign: 'center', fontSize: 'var(--text-sm)', color: 'var(--color-ink-faint)', fontFamily: 'var(--font-mono)' }}>No resolved incidents</div>
           ) : (
-            incidents.map((inc) => (
+            incidents.map((inc, i) => (
               <button key={inc.id} onClick={() => router.push(`/dashboard/incidents/${inc.id}`)} style={{
-                display: 'block', width: '100%', textAlign: 'left', padding: '16px 18px',
-                background: 'transparent', border: 'none', borderBottom: '1px solid var(--border)',
-                transition: 'background 0.15s',
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
-                  <span style={{ fontSize: 14, fontWeight: 600 }}>{passengerName(inc.passenger_id)}</span>
-                  <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{timeAgo(inc.created_at)}</span>
+                display: 'block', width: '100%', textAlign: 'left', padding: '14px 16px',
+                background: 'transparent', border: 'none',
+                borderBottom: i < incidents.length - 1 ? '1px solid var(--color-rule)' : 'none',
+                transition: 'background 120ms ease',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--color-paper-hover)')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
+                  <span style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--color-ink)' }}>{passengerName(inc.passenger_id)}</span>
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-faint)', fontFamily: 'var(--font-mono)' }}>{timeAgo(inc.created_at)}</span>
                 </div>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--text-muted)', marginBottom: 6 }}>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--color-ink-faint)', marginBottom: 5 }}>
                   {inc.latitude.toFixed(4)}, {inc.longitude.toFixed(4)}
                 </div>
                 <span style={{
-                  fontSize: 10, fontWeight: 600, color: 'var(--text-dim)',
-                  background: 'rgba(0,0,0,0.04)', padding: '2px 8px', borderRadius: 'var(--radius-pill)',
-                }}>{inc.trigger_type === 'audio' ? 'Sound' : 'Tap'}</span>
+                  fontSize: 'var(--text-xs)', fontWeight: 600, fontFamily: 'var(--font-mono)',
+                  color: 'var(--color-ink-muted)', background: 'var(--color-paper)',
+                  padding: '2px 8px', borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-rule)',
+                }}>{inc.trigger_type === 'audio' ? 'SOUND' : 'TAP'}</span>
               </button>
             ))
           )}
         </div>
 
         {totalPages > 1 && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginTop: 24 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: 20 }}>
             <button disabled={currentPage <= 1} onClick={() => router.push(`/dashboard/history?page=${currentPage - 1}`)}
               style={{
-                fontSize: 13, fontWeight: 600, color: 'var(--blue)', background: '#fff',
-                border: '1px solid var(--border)', padding: '8px 18px', borderRadius: 'var(--radius-sm)',
-                opacity: currentPage <= 1 ? 0.3 : 1,
+                fontSize: 'var(--text-sm)', fontWeight: 600, fontFamily: 'var(--font-mono)',
+                color: 'var(--color-accent)', background: 'var(--color-paper-raised)',
+                border: '1px solid var(--color-rule)', padding: '6px 16px', borderRadius: 'var(--radius-sm)',
+                opacity: currentPage <= 1 ? 0.3 : 1, cursor: currentPage <= 1 ? 'not-allowed' : 'pointer',
               }}>Prev</button>
-            <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>{currentPage} / {totalPages}</span>
+            <span style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-faint)', fontFamily: 'var(--font-mono)' }}>{currentPage}/{totalPages}</span>
             <button disabled={currentPage >= totalPages} onClick={() => router.push(`/dashboard/history?page=${currentPage + 1}`)}
               style={{
-                fontSize: 13, fontWeight: 600, color: 'var(--blue)', background: '#fff',
-                border: '1px solid var(--border)', padding: '8px 18px', borderRadius: 'var(--radius-sm)',
-                opacity: currentPage >= totalPages ? 0.3 : 1,
+                fontSize: 'var(--text-sm)', fontWeight: 600, fontFamily: 'var(--font-mono)',
+                color: 'var(--color-accent)', background: 'var(--color-paper-raised)',
+                border: '1px solid var(--color-rule)', padding: '6px 16px', borderRadius: 'var(--radius-sm)',
+                opacity: currentPage >= totalPages ? 0.3 : 1, cursor: currentPage >= totalPages ? 'not-allowed' : 'pointer',
               }}>Next</button>
           </div>
         )}
@@ -120,7 +128,7 @@ function HistoryPageInner() {
 export default function HistoryPage() {
   return (
     <Suspense fallback={
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', color: 'var(--text-muted)', fontSize: 14 }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-paper)', color: 'var(--color-ink-faint)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-mono)' }}>
         Loading...
       </div>
     }>

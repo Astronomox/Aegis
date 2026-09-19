@@ -7,13 +7,7 @@ import { MenuIcon, CloseIcon, ArrowLeftIcon } from '@/components/icons/Icons';
 import { useIsMobile } from '@/lib/useIsMobile';
 
 interface AppTopBarProps {
-  // 'floating' sits absolutely over a full-bleed map (used by the live
-  // dashboard). 'static' sits at the top of a normal-flow white page
-  // (used by history, incident detail, passengers).
   variant: 'floating' | 'static';
-  // Optional extra controls specific to one page, rendered before the
-  // shared nav links (e.g. the active-incident count and Simulate button
-  // on the live dashboard).
   extraDesktopControls?: React.ReactNode;
   extraMobileControls?: { label: string; color: string; onClick: () => void }[];
 }
@@ -23,7 +17,6 @@ const NAV_LINKS = [
   { label: 'Passengers', path: '/dashboard/passengers' },
   { label: 'History', path: '/dashboard/history' },
 ];
-
 
 export default function AppTopBar({
   variant,
@@ -39,26 +32,30 @@ export default function AppTopBar({
 
   const containerStyle: React.CSSProperties = isFloating
     ? {
-        position: 'absolute', top: 16, left: 16, right: 16, zIndex: 20,
+        position: 'absolute', top: 12, left: 12, right: 12, zIndex: 20,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '10px 16px',
-        background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)',
-        border: '1px solid var(--border)', borderRadius: 'var(--radius)',
-        boxShadow: '0 2px 12px rgba(0,0,0,0.04)',
+        padding: '8px 14px',
+        background: 'var(--color-paper-raised)', backdropFilter: 'blur(12px)',
+        border: '1px solid var(--color-rule)', borderRadius: 'var(--radius-md)',
+        boxShadow: 'var(--shadow-md)',
       }
     : {
         position: 'sticky', top: 0, zIndex: 30,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '14px 20px',
-        background: 'rgba(255,255,255,0.92)', backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid var(--border)',
+        padding: '10px 16px',
+        background: 'var(--color-paper-raised)', backdropFilter: 'blur(12px)',
+        borderBottom: '1px solid var(--color-rule)',
       };
 
-  const pill = (color: string, bg: string): React.CSSProperties => ({
-    display: 'inline-flex', alignItems: 'center', gap: 6,
-    fontSize: 13, fontWeight: 600, color,
-    background: bg, border: 'none',
-    padding: '9px 16px', borderRadius: 'var(--radius-pill)',
+  const navBtn = (active: boolean): React.CSSProperties => ({
+    display: 'inline-flex', alignItems: 'center', gap: 5,
+    fontSize: 'var(--text-sm)', fontWeight: 500,
+    fontFamily: 'var(--font-body)',
+    color: active ? 'var(--color-accent)' : 'var(--color-ink-muted)',
+    background: active ? 'var(--color-accent-dim)' : 'transparent',
+    border: '1px solid', borderColor: active ? 'var(--color-accent-dim)' : 'transparent',
+    padding: '6px 12px', borderRadius: 'var(--radius-sm)',
+    transition: 'color 120ms ease, background 120ms ease, border-color 120ms ease',
   });
 
   const handleLogout = () => performLogout(router);
@@ -66,33 +63,39 @@ export default function AppTopBar({
   return (
     <>
       <div style={containerStyle}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <img src="/aegis-logo.png" alt="Aegis" style={{ height: 18 }} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <img src="/aegis-logo.png" alt="Aegis" style={{ height: 16, opacity: 0.9 }} />
         </div>
 
         {isMobile ? (
           <button
             onClick={() => setMenuOpen((v) => !v)}
             style={{
-              width: 34, height: 34, display: 'flex', alignItems: 'center', justifyContent: 'center',
-              background: menuOpen ? 'var(--blue-dim)' : 'transparent',
-              border: 'none', borderRadius: 'var(--radius-sm)', color: 'var(--text)',
+              width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: menuOpen ? 'var(--color-accent-dim)' : 'transparent',
+              border: '1px solid var(--color-rule)', borderRadius: 'var(--radius-sm)',
+              color: 'var(--color-ink)',
             }}
-          >{menuOpen ? <CloseIcon size={18} /> : <MenuIcon size={18} />}</button>
+          >{menuOpen ? <CloseIcon size={16} /> : <MenuIcon size={16} />}</button>
         ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             {extraDesktopControls}
             {NAV_LINKS.map((link) => (
               <button
                 key={link.path}
                 onClick={() => router.push(link.path)}
-                style={pill(
-                  pathname === link.path ? '#fff' : 'var(--text-dim)',
-                  pathname === link.path ? 'var(--blue)' : 'rgba(0,0,0,0.04)'
-                )}
+                style={navBtn(pathname === link.path)}
               >{link.label}</button>
             ))}
-            <button onClick={handleLogout} style={pill('var(--red)', 'var(--red-dim)')}>
+            <div style={{ width: 1, height: 16, background: 'var(--color-rule)', margin: '0 4px' }} />
+            <button
+              onClick={handleLogout}
+              style={{
+                ...navBtn(false),
+                color: 'var(--color-danger)',
+                borderColor: 'var(--color-danger-dim)',
+              }}
+            >
               Log out
             </button>
           </div>
@@ -102,19 +105,23 @@ export default function AppTopBar({
       {isMobile && menuOpen && (
         <div style={{
           position: isFloating ? 'absolute' : 'fixed',
-          top: isFloating ? 72 : 64,
-          left: 16, right: 16, zIndex: 25,
-          background: '#fff', border: '1px solid var(--border)', borderRadius: 'var(--radius)',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.08)', overflow: 'hidden',
+          top: isFloating ? 60 : 52,
+          left: 12, right: 12, zIndex: 25,
+          background: 'var(--color-paper-overlay)',
+          border: '1px solid var(--color-rule)', borderRadius: 'var(--radius-md)',
+          boxShadow: 'var(--shadow-lg)', overflow: 'hidden',
+          backdropFilter: 'blur(12px)',
         }}>
           {extraMobileControls.map((item) => (
             <button
               key={item.label}
               onClick={() => { item.onClick(); setMenuOpen(false); }}
               style={{
-                width: '100%', textAlign: 'left', padding: '14px 16px',
-                fontSize: 14, fontWeight: 600, color: item.color,
-                background: 'transparent', borderBottom: '1px solid var(--border)',
+                width: '100%', textAlign: 'left', padding: '12px 14px',
+                fontSize: 'var(--text-base)', fontWeight: 500,
+                fontFamily: 'var(--font-body)',
+                color: item.color,
+                background: 'transparent', borderBottom: '1px solid var(--color-rule)',
               }}
             >{item.label}</button>
           ))}
@@ -123,18 +130,21 @@ export default function AppTopBar({
               key={link.path}
               onClick={() => { setMenuOpen(false); router.push(link.path); }}
               style={{
-                width: '100%', textAlign: 'left', padding: '14px 16px',
-                fontSize: 14, fontWeight: 600,
-                color: pathname === link.path ? 'var(--blue)' : 'var(--text-dim)',
-                background: 'transparent', borderBottom: '1px solid var(--border)',
+                width: '100%', textAlign: 'left', padding: '12px 14px',
+                fontSize: 'var(--text-base)', fontWeight: 500,
+                fontFamily: 'var(--font-body)',
+                color: pathname === link.path ? 'var(--color-accent)' : 'var(--color-ink-muted)',
+                background: 'transparent', borderBottom: '1px solid var(--color-rule)',
               }}
             >{link.label}</button>
           ))}
           <button
             onClick={() => { setMenuOpen(false); handleLogout(); }}
             style={{
-              width: '100%', textAlign: 'left', padding: '14px 16px',
-              fontSize: 14, fontWeight: 600, color: 'var(--red)', background: 'transparent',
+              width: '100%', textAlign: 'left', padding: '12px 14px',
+              fontSize: 'var(--text-base)', fontWeight: 500,
+              fontFamily: 'var(--font-body)',
+              color: 'var(--color-danger)', background: 'transparent',
             }}
           >Log out</button>
         </div>
@@ -143,18 +153,18 @@ export default function AppTopBar({
   );
 }
 
-// Small reusable back-link used on pages nested under /dashboard (history,
-// incident detail) so the "go back" affordance is visually consistent too.
 export function BackToDashboardLink() {
   const router = useRouter();
   return (
     <button
       onClick={() => router.push('/dashboard')}
       style={{
-        background: 'none', border: 'none', fontSize: 13, fontWeight: 600,
-        color: 'var(--blue)', marginBottom: 16, display: 'flex',
-        alignItems: 'center', gap: 6,
+        background: 'none', border: 'none',
+        fontSize: 'var(--text-sm)', fontWeight: 500,
+        fontFamily: 'var(--font-body)',
+        color: 'var(--color-accent)', marginBottom: 12,
+        display: 'flex', alignItems: 'center', gap: 5,
       }}
-    ><ArrowLeftIcon size={14} /> Back to dashboard</button>
+    ><ArrowLeftIcon size={13} /> Back to dashboard</button>
   );
 }

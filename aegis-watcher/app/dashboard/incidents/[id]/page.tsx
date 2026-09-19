@@ -46,7 +46,7 @@ export default function IncidentDetailPage() {
   if (loading) return (
     <>
       <AppTopBar variant="static" />
-      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', color: 'var(--text-muted)', fontSize: 14 }}>
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-paper)', color: 'var(--color-ink-faint)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-mono)' }}>
         Loading...
       </div>
     </>
@@ -55,11 +55,13 @@ export default function IncidentDetailPage() {
   if (!incident) return (
     <>
       <AppTopBar variant="static" />
-      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', gap: 16 }}>
-        <p style={{ color: 'var(--text-muted)', fontSize: 14 }}>Incident not found</p>
+      <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--color-paper)', gap: 14 }}>
+        <p style={{ color: 'var(--color-ink-faint)', fontSize: 'var(--text-sm)', fontFamily: 'var(--font-mono)' }}>Incident not found</p>
         <button onClick={() => router.push('/dashboard')} style={{
-          fontSize: 13, fontWeight: 700, color: 'var(--blue)', background: 'var(--blue-dim)',
-          padding: '10px 24px', borderRadius: 'var(--radius-pill)',
+          fontSize: 'var(--text-sm)', fontWeight: 600, fontFamily: 'var(--font-mono)',
+          color: 'var(--color-accent)', background: 'var(--color-accent-dim)',
+          border: '1px solid var(--color-accent-dim)',
+          padding: '8px 20px', borderRadius: 'var(--radius-sm)',
         }}>Back to dashboard</button>
       </div>
     </>
@@ -70,67 +72,79 @@ export default function IncidentDetailPage() {
   return (
     <>
       <AppTopBar variant="static" />
-      <div style={{ minHeight: 'calc(100vh - 65px)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', padding: '24px' }}>
-        <div style={{ width: '100%', maxWidth: 480 }}>
+      <div style={{ minHeight: 'calc(100vh - 52px)', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--color-paper)', padding: '20px' }}>
+        <div style={{ width: '100%', maxWidth: 460 }}>
           <BackToDashboardLink />
 
-        <div style={{
-          background: '#fff', border: '1px solid var(--border)', borderRadius: 'var(--radius)',
-          overflow: 'hidden',
-        }}>
           <div style={{
-            padding: '16px 20px', borderBottom: '1px solid var(--border)',
-            display: 'flex', alignItems: 'center', gap: 10,
+            background: 'var(--color-paper-raised)', border: '1px solid var(--color-rule)',
+            borderRadius: 'var(--radius-md)', overflow: 'hidden',
           }}>
-            <span style={{
-              width: 10, height: 10, borderRadius: '50%',
-              background: isActive ? 'var(--red)' : 'var(--green-dark)',
-            }} />
-            <span style={{ fontSize: 16, fontWeight: 700, color: isActive ? 'var(--red)' : 'var(--green-dark)' }}>
-              {isActive ? 'Active alert' : 'Resolved'}
-            </span>
-          </div>
+            <div style={{
+              padding: '14px 18px', borderBottom: '1px solid var(--color-rule)',
+              display: 'flex', alignItems: 'center', gap: 8,
+            }}>
+              <span style={{
+                width: 8, height: 8, borderRadius: '50%',
+                background: isActive ? 'var(--color-danger)' : 'var(--color-safe)',
+              }} />
+              <span style={{
+                fontSize: 'var(--text-base)', fontWeight: 600,
+                fontFamily: 'var(--font-mono)',
+                color: isActive ? 'var(--color-danger)' : 'var(--color-safe)',
+              }}>
+                {isActive ? 'ACTIVE' : 'RESOLVED'}
+              </span>
+            </div>
 
-          <div style={{ padding: 22 }}>
-            {[
-              ['Passenger', passengerName(incident.passenger_id)],
-              ['Latitude', incident.latitude.toFixed(6)],
-              ['Longitude', incident.longitude.toFixed(6)],
-              ['Trigger', incident.trigger_type === 'audio' ? 'Sound detected' : 'Manual tap'],
-              ['Time', new Date(incident.created_at).toLocaleString()],
-            ].map(([label, value]) => (
-              <div key={label} style={{ marginBottom: 16 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 3 }}>{label}</div>
-                <div style={{ fontFamily: label === 'Passenger' || label === 'Trigger' ? 'var(--sans)' : 'var(--mono)', fontSize: 15, fontWeight: 600 }}>{value}</div>
-              </div>
-            ))}
+            <div style={{ padding: 18 }}>
+              {[
+                ['PASSENGER', passengerName(incident.passenger_id)],
+                ['LATITUDE', incident.latitude.toFixed(6)],
+                ['LONGITUDE', incident.longitude.toFixed(6)],
+                ['TRIGGER', incident.trigger_type === 'audio' ? 'SOUND' : 'TAP'],
+                ['TIME', new Date(incident.created_at).toLocaleString()],
+              ].map(([label, value]) => (
+                <div key={label} style={{ marginBottom: 14 }}>
+                  <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, fontFamily: 'var(--font-mono)', color: 'var(--color-ink-faint)', letterSpacing: '0.05em', marginBottom: 3 }}>{label}</div>
+                  <div style={{
+                    fontFamily: label === 'PASSENGER' || label === 'TRIGGER' ? 'var(--font-body)' : 'var(--font-mono)',
+                    fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--color-ink)',
+                  }}>{value}</div>
+                </div>
+              ))}
 
-            {incident.audio_url && !incident.audio_url.startsWith('mock://') && (
-              <div style={{ marginBottom: 18 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-muted)', marginBottom: 6 }}>Audio recording</div>
-                <audio controls src={incident.audio_url} style={{ width: '100%' }} />
-              </div>
-            )}
+              {incident.audio_url && !incident.audio_url.startsWith('mock://') && (
+                <div style={{ marginBottom: 16 }}>
+                  <div style={{ fontSize: 'var(--text-xs)', fontWeight: 600, fontFamily: 'var(--font-mono)', color: 'var(--color-ink-faint)', letterSpacing: '0.05em', marginBottom: 5 }}>AUDIO</div>
+                  <audio controls src={incident.audio_url} style={{ width: '100%' }} />
+                </div>
+              )}
 
-            <a href={`https://www.google.com/maps?q=${incident.latitude},${incident.longitude}`}
-              target="_blank" rel="noopener noreferrer"
-              style={{
-                display: 'block', textAlign: 'center', fontSize: 14, fontWeight: 700,
-                color: 'var(--blue)', background: 'var(--blue-dim)',
-                padding: '12px 0', borderRadius: 'var(--radius-sm)', marginBottom: 8,
-              }}>Open in Google Maps</a>
+              <a href={`https://www.google.com/maps?q=${incident.latitude},${incident.longitude}`}
+                target="_blank" rel="noopener noreferrer"
+                style={{
+                  display: 'block', textAlign: 'center', fontSize: 'var(--text-sm)', fontWeight: 600,
+                  fontFamily: 'var(--font-mono)',
+                  color: 'var(--color-paper)', background: 'var(--color-accent)',
+                  padding: '10px 0', borderRadius: 'var(--radius-sm)', marginBottom: 8,
+                  textDecoration: 'none',
+                }}>Open in Maps</a>
 
-            {isActive && (
-              <button onClick={handleResolve} disabled={resolving} style={{
-                width: '100%', fontSize: 14, fontWeight: 700,
-                color: '#fff', background: 'var(--green-dark)',
-                padding: '12px 0', borderRadius: 'var(--radius-sm)',
-                opacity: resolving ? 0.6 : 1,
-              }}>{resolving ? 'Resolving...' : 'Mark as resolved'}</button>
-            )}
+              {isActive && (
+                <button onClick={handleResolve} disabled={resolving} style={{
+                  width: '100%', fontSize: 'var(--text-sm)', fontWeight: 600,
+                  fontFamily: 'var(--font-mono)',
+                  color: 'var(--color-paper)', background: 'var(--color-safe)',
+                  padding: '10px 0', borderRadius: 'var(--radius-sm)',
+                  opacity: resolving ? 0.5 : 1,
+                  cursor: resolving ? 'not-allowed' : 'pointer',
+                  transition: 'opacity 120ms ease',
+                }}>{resolving ? 'Resolving...' : 'Mark resolved'}</button>
+              )}
+            </div>
           </div>
         </div>
-      </div>
       </div>
     </>
   );

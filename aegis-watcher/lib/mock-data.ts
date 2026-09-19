@@ -1,4 +1,4 @@
-import type { Incident, Trip, Company, FleetVehicle } from '@/types';
+import type { Incident, Trip, Company, FleetVehicle, PassengerProfile } from '@/types';
 
 export const MOCK_INCIDENTS: Incident[] = [
   {
@@ -149,4 +149,41 @@ export const MOCK_DANGER_ZONES = [
     advisory: 'Pass through before dusk. One-tap SOS ready on Aegis app.',
   },
 ];
+
+export const MOCK_PASSENGER_PROFILES: Record<string, PassengerProfile> = {
+  'demo-passenger-001': {
+    id: 'p-001',
+    passenger_id: 'demo-passenger-001',
+    name: 'Demo Passenger',
+    emergency_contact_name: 'Dr. Chukwuma Okafor (Brother)',
+    emergency_contact_phone: '+234 803 123 4567',
+    health_conditions: ['Asthma', 'Hypertension'],
+    disabilities: ['Hearing Impaired'],
+    pairing_code: 'AEG901',
+    created_at: new Date().toISOString(),
+  },
+  'user-001': {
+    id: 'p-002',
+    passenger_id: 'user-001',
+    name: 'Aisha Bello',
+    emergency_contact_name: 'Alhaji Ibrahim Bello (Father)',
+    emergency_contact_phone: '+234 802 333 4444',
+    health_conditions: ['Diabetes Type 2'],
+    disabilities: [],
+    pairing_code: 'AEG882',
+    created_at: new Date().toISOString(),
+  },
+  'user-002': {
+    id: 'p-003',
+    passenger_id: 'user-002',
+    name: 'Emeka Okafor',
+    emergency_contact_name: 'Grace Okafor (Wife)',
+    emergency_contact_phone: '+234 809 888 7777',
+    health_conditions: ['Epilepsy'],
+    disabilities: ['Mobility Impaired'],
+    pairing_code: 'AEG104',
+    created_at: new Date().toISOString(),
+  },
+};
+
 

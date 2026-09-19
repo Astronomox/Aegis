@@ -51,10 +51,10 @@ export default function IncidentMap({ incidents, trips = [], onMarkerClick }: Pr
         attributionControl: false,
       });
 
-      // Warm, clean light map
+      // Ultra-clean vector style tile layer without text watermarks
       L.tileLayer(
-        'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
-        { maxZoom: 19 }
+        'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png',
+        { maxZoom: 19, attribution: '' }
       ).addTo(map);
 
       mapInstanceRef.current = map;
@@ -176,6 +176,7 @@ export default function IncidentMap({ incidents, trips = [], onMarkerClick }: Pr
           box-shadow: 0 4px 20px rgba(0,0,0,0.12) !important;
         }
         .aegis-tooltip::before, .leaflet-tooltip-top::before { display: none !important; }
+        .leaflet-control-attribution, .leaflet-control-container .leaflet-bottom { display: none !important; }
       `}</style>
     </>
   );

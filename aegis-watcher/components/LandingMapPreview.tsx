@@ -62,9 +62,11 @@ export default function LandingMapPreview() {
         keyboard: false,
       });
 
-      L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png', {
         maxZoom: 19,
+        attribution: '',
       }).addTo(map);
+
 
       mapInstanceRef.current = map;
       setReady(true);

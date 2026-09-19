@@ -221,6 +221,7 @@ export default function PassengerMainScreen({ passengerId: initialPassengerId })
     }
   };
 
+<<<<<<< Updated upstream
   const ProfileCheckItem = ({ label, value, complete }) => (
     <View style={styles.checkItem}>
       <View style={[styles.checkBox, passengerName && styles.checkBoxDone]}>
@@ -240,6 +241,111 @@ export default function PassengerMainScreen({ passengerId: initialPassengerId })
         <Text style={styles.sosSubtitle}>
           One tap sends SMS + alerts emergency contact
         </Text>
+=======
+  // On mount: restore active trip state if present
+  useEffect(() => {
+    (async () => {
+      try {
+        let saved = null;
+        if (Platform.OS === 'web' && typeof window !== 'undefined') {
+          const str = localStorage.getItem('aegis_passenger_active_trip');
+          if (str) saved = JSON.parse(str);
+        }
+        if (saved) {
+          setActiveTrip(saved);
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    })();
+  }, []);
+
+  const saveActiveTripState = (trip) => {
+    setActiveTrip(trip);
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      if (trip) {
+        localStorage.setItem('aegis_passenger_active_trip', JSON.stringify(trip));
+      } else {
+        localStorage.removeItem('aegis_passenger_active_trip');
+      }
+    }
+  };
+
+  const handleStartTrip = async () => {
+    setStartingTrip(true);
+    const coords = await getLocationFast();
+
+    const durationSeconds = demoFastTimer ? 30 : selectedRoute.durationMins * 60;
+    const now = new Date();
+    const expectedArrival = new Date(now.getTime() + durationSeconds * 1000);
+
+    const tripData = {
+      passenger_id: passengerId || 'demo-passenger-001',
+      passenger_name: 'Demo Passenger',
+      bus_route: selectedRoute.name,
+      vehicle_id: vehicleId,
+      departure_location: selectedRoute.name.split('➔')[0].trim(),
+      arrival_location: selectedRoute.name.split('➔')[1].trim(),
+      departure_time: now.toISOString(),
+      expected_arrival: expectedArrival.toISOString(),
+      status: 'active',
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+      emergency_contact: emergencyPhone,
+    };
+
+    const res = await startTrip(tripData);
+    saveActiveTripState(res.data || tripData);
+    setTimeLeft(durationSeconds);
+    setStartingTrip(false);
+  };
+
+  const handleCheckOut = async () => {
+    if (!activeTrip) return;
+    setCheckingOut(true);
+    await updateTripStatus(activeTrip.id, 'completed', {
+      actual_arrival: new Date().toISOString(),
+    });
+    saveActiveTripState(null);
+    setCheckingOut(false);
+  };
+
+  const handleAutoAlert = async () => {
+    if (!activeTrip || activeTrip.status === 'alert') return;
+    await updateTripStatus(activeTrip.id, 'alert');
+    const updated = { ...activeTrip, status: 'alert' };
+    saveActiveTripState(updated);
+
+    const coords = await getLocationFast();
+    const message = `AUTO-ALERT: Passenger did not check out! Bus: ${activeTrip.bus_route} (${activeTrip.vehicle_id}). Location: https://maps.google.com/?q=${coords.latitude},${coords.longitude}`;
+    openNativeSMS(emergencyPhone, message);
+  };
+
+
+  const formatTimeLeft = (sec) => {
+    const mins = Math.floor(sec / 60);
+    const secs = sec % 60;
+    const hrs = Math.floor(mins / 60);
+    const remainMins = mins % 60;
+    if (hrs > 0) {
+      return `${hrs}h ${remainMins}m ${secs < 10 ? '0' : ''}${secs}s`;
+    }
+    return `${mins}m ${secs < 10 ? '0' : ''}${secs}s`;
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      {/* HEADER */}
+      <View style={styles.header}>
+        <View style={styles.headerTitleRow}>
+          <Text style={styles.headerBadge}>NIGERIA INTERSTATE</Text>
+          <Text style={styles.headerTitle}>AEGIS</Text>
+        </View>
+        <View style={styles.statusPill}>
+          <View style={styles.statusDot} />
+          <Text style={styles.statusText}>SMS-First Active</Text>
+        </View>
+>>>>>>> Stashed changes
       </View>
 
       {!profileComplete && (
