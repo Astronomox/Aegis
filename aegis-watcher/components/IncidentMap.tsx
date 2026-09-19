@@ -98,3 +98,54 @@ export default function IncidentMap({ incidents, onMarkerClick }: Props) {
       });
 
       const marker = L.marker([inc.latitude, inc.longitude], { icon }).addTo(map);
+
+      if (onMarkerClick) {
+        marker.on('click', () => onMarkerClick(inc.id));
+      }
+
+      // Tooltip on hover - Palantir data style
+      marker.bindTooltip(
+        `<div style="font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.6;padding:2px 0;">
+          <div style="color:${isActive ? '#d92d2d' : '#888'};font-weight:700;font-size:9px;letter-spacing:2px;margin-bottom:2px;">${isActive ? '● ACTIVE THREAT' : '○ RESOLVED'}</div>
+          <div style="color:#333;">${inc.latitude.toFixed(5)}, ${inc.longitude.toFixed(5)}</div>
+          <div style="color:#999;font-size:9px;">${inc.trigger_type.toUpperCase()} TRIGGER</div>
+        </div>`,
+        {
+          className: 'aegis-tooltip',
+          direction: 'top',
+          offset: [0, isActive ? -24 : -10],
+        }
+      );
+
+      markersRef.current.push(marker);
+    });
+
+    const active = data.filter((i) => i.status === 'active');
+    if (active.length > 0) {
+      const bounds = L.latLngBounds(active.map((i: Incident) => [i.latitude, i.longitude]));
+      map.fitBounds(bounds, { padding: [80, 80], maxZoom: 13 });
+    }
+  }
+
+  return (
+    <>
+      <div ref={mapRef} style={{ position: 'absolute', inset: 0, zIndex: 0 }} />
+      <style>{`
+        @keyframes radar {
+          0% { transform: scale(0.5); opacity: 1; }
+          100% { transform: scale(2.5); opacity: 0; }
+        }
+        .aegis-tooltip {
+          background: rgba(255,255,255,0.96) !important;
+          border: 1px solid rgba(0,0,0,0.08) !important;
+          border-radius: 6px !important;
+          padding: 8px 12px !important;
+          box-shadow: 0 8px 32px rgba(0,0,0,0.12) !important;
+          backdrop-filter: blur(12px) !important;
+        }
+        .aegis-tooltip::before { display: none !important; }
+        .leaflet-tooltip-top::before { display: none !important; }
+      `}</style>
+    </>
+  );
+}
