@@ -5,6 +5,7 @@ import AppTopBar from '@/components/AppTopBar';
 import {
   detectAIAnomalies,
   aggregateSOSClusters,
+  fetchOpenRouterBriefing,
   DANGEROUS_ROUTES_DATA,
   type AIAnomaly,
   type SOSCluster,
@@ -22,6 +23,11 @@ export default function AISafetyPage() {
   const [selectedRoute, setSelectedRoute] = useState<RouteSafetyAdvisory | null>(DANGEROUS_ROUTES_DATA[0]);
   const [broadcastSent, setBroadcastSent] = useState(false);
   const [scanning, setScanning] = useState(false);
+
+  // OpenRouter State (model: openrouter/free)
+  const [openRouterKey, setOpenRouterKey] = useState<string>('');
+  const [openRouterBriefing, setOpenRouterBriefing] = useState<string>('');
+  const [generatingBriefing, setGeneratingBriefing] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -70,6 +76,14 @@ export default function AISafetyPage() {
     setTimeout(() => setBroadcastSent(false), 3000);
   };
 
+  const handleGenerateLLMBriefing = async () => {
+    setGeneratingBriefing(true);
+    const summaryPrompt = `Analyze current active trips (${trips.length}) and active SOS alerts (${incidents.length}). Active anomalies: ${anomalies.map(a => a.title).join('; ')}. Route: ${selectedRoute?.routeName || 'Interstate Highways'}. Provide a 3-bullet security synthesis for dispatchers.`;
+    const res = await fetchOpenRouterBriefing(summaryPrompt, openRouterKey);
+    setOpenRouterBriefing(res);
+    setGeneratingBriefing(false);
+  };
+
   const getRiskColor = (level: string) => {
     switch (level) {
       case 'SEVERE':
@@ -92,7 +106,7 @@ export default function AISafetyPage() {
 
       <main style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 16px' }}>
         {/* PAGE HEADER */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginBottom: 24 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginBottom: 20 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ fontSize: 24 }}>🤖</span>
@@ -101,7 +115,7 @@ export default function AISafetyPage() {
               </h1>
             </div>
             <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-muted)', marginTop: 4 }}>
-              Automated spatial-temporal anomaly detection, SOS distress spatial clusters, and interstate route security advisories.
+              Powered by <strong>OpenRouter (openrouter/free)</strong> for real-time natural language threat briefings & spatial anomaly detection.
             </p>
           </div>
 
@@ -116,9 +130,62 @@ export default function AISafetyPage() {
                 color: 'var(--color-ink)', cursor: 'pointer',
               }}
             >
-              {scanning ? '⏳ Scanning Telemetry...' : '🔄 Run AI Scan'}
+              {scanning ? '⏳ Scanning Telemetry...' : '🔄 Run Telemetry Scan'}
             </button>
           </div>
+        </div>
+
+        {/* OPENROUTER CONFIGURATION & LLM BRIEFING CARD */}
+        <div style={{
+          background: 'var(--color-paper-raised)', border: '1px solid var(--color-accent)',
+          borderRadius: 'var(--radius-lg)', padding: 16, marginBottom: 24,
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 10 }}>
+            <div style={{ fontSize: 'var(--text-sm)', fontWeight: 800, color: 'var(--color-accent)', fontFamily: 'var(--font-mono)' }}>
+              🌐 OPENROUTER AI ENGINE (MODEL: <span style={{ color: 'var(--color-safe)' }}>openrouter/free</span>)
+            </div>
+            <div style={{ fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', color: 'var(--color-ink-faint)' }}>
+              STATUS: {openRouterKey ? '🔑 CUSTOM KEY ACTIVE' : '⚡ DEFAULT ENGINE'}
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
+            <input
+              type="password"
+              placeholder="Paste OpenRouter API Key (e.g. sk-or-v1-...)"
+              value={openRouterKey}
+              onChange={(e) => setOpenRouterKey(e.target.value)}
+              style={{
+                flex: 1, minWidth: 260, padding: '8px 12px', background: 'var(--color-paper)',
+                border: '1px solid var(--color-rule)', borderRadius: 'var(--radius-sm)',
+                fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', color: 'var(--color-ink)',
+              }}
+            />
+            <button
+              onClick={handleGenerateLLMBriefing}
+              disabled={generatingBriefing}
+              style={{
+                padding: '8px 16px', background: 'var(--color-accent)', color: 'var(--color-paper)',
+                border: 'none', borderRadius: 'var(--radius-sm)',
+                fontSize: 'var(--text-xs)', fontWeight: 800, fontFamily: 'var(--font-mono)', cursor: 'pointer',
+              }}
+            >
+              {generatingBriefing ? '⏳ Querying OpenRouter...' : '✨ Generate OpenRouter AI Briefing'}
+            </button>
+          </div>
+
+          {openRouterBriefing && (
+            <div style={{
+              background: 'var(--color-paper)', border: '1px solid var(--color-rule)',
+              borderRadius: 'var(--radius-md)', padding: 14, fontSize: 'var(--text-sm)',
+              color: 'var(--color-ink)', lineHeight: 1.6, whiteSpace: 'pre-wrap',
+            }}>
+              <div style={{ fontSize: 'var(--text-xs)', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--color-safe)', marginBottom: 6 }}>
+                🤖 OPENROUTER AI SECURITY BRIEFING:
+              </div>
+              {openRouterBriefing}
+            </div>
+          )}
         </div>
 
         {/* BROADCAST ALERT NOTIFICATION BANNER */}
