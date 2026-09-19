@@ -122,3 +122,65 @@ export default function OnboardingScreen({ onComplete }) {
         </Text>
       </TouchableOpacity>
     </KeyboardAvoidingView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.black,
+    justifyContent: 'center',
+    padding: SPACING.lg,
+  },
+  logo: {
+    width: 160,
+    height: 55,
+    alignSelf: 'center',
+    marginBottom: SPACING.xl,
+    tintColor: COLORS.white,
+  },
+  heading: {
+    color: COLORS.white,
+    fontSize: 22,
+    fontWeight: '700',
+    marginBottom: SPACING.sm,
+  },
+  sub: {
+    color: COLORS.lightGray,
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: SPACING.lg,
+  },
+  inputGroup: {
+    marginBottom: SPACING.md,
+  },
+  label: {
+    color: COLORS.lightGray,
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: SPACING.xs,
+  },
+  input: {
+    backgroundColor: COLORS.darkGray,
+    borderRadius: 8,
+    paddingHorizontal: SPACING.md,
+    paddingVertical: 14,
+    color: COLORS.white,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: COLORS.midGray,
+  },
+  btn: {
+    backgroundColor: COLORS.red,
+    borderRadius: 10,
+    paddingVertical: 16,
+    alignItems: 'center',
+    marginTop: SPACING.lg,
+  },
+  btnDisabled: { opacity: 0.5 },
+  btnText: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: '700',
+  },
+});
