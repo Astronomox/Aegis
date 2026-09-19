@@ -78,10 +78,12 @@ alter table pairing_codes enable row level security;
 drop policy if exists "Incidents: Public read" on incidents;
 drop policy if exists "Incidents: Authenticated insert" on incidents;
 drop policy if exists "Incidents: Authenticated update" on incidents;
+drop policy if exists "Incidents: Public insert" on incidents;
+drop policy if exists "Incidents: Public update" on incidents;
 
 create policy "Incidents: Public read" on incidents for select using (true);
-create policy "Incidents: Authenticated insert" on incidents for insert with check (auth.uid() is not null);
-create policy "Incidents: Authenticated update" on incidents for update using (auth.uid() is not null);
+create policy "Incidents: Public insert" on incidents for insert with check (true);
+create policy "Incidents: Public update" on incidents for update using (true);
 
 -- Watchers: Authenticated users can manage watchers
 drop policy if exists "Watchers: Authenticated read" on watchers;

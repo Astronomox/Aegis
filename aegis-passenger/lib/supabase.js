@@ -21,7 +21,21 @@ export async function insertIncident(payload) {
     await new Promise((r) => setTimeout(r, 300));
     return { data: { ...payload, id: 'mock-' + Date.now() }, error: null };
   }
-  return supabase.from('incidents').insert(payload);
+  return supabase.from('incidents').insert(payload).select().single();
+}
+
+/**
+ * Patch an already-sent incident with refined data (accurate GPS, audio
+ * URL) once it's available. Fire-and-forget from the caller's side — the
+ * watcher already has the initial ping and will get the row UPDATE via
+ * realtime.
+ */
+export async function updateIncident(id, payload) {
+  if (MOCK_MODE) {
+    console.log('[MOCK] incident update ->', id, JSON.stringify(payload, null, 2));
+    return { data: { id, ...payload }, error: null };
+  }
+  return supabase.from('incidents').update(payload).eq('id', id);
 }
 
 /**

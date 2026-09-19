@@ -8,6 +8,7 @@ import {
   Modal,
   TouchableOpacity,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as Haptics from 'expo-haptics';
@@ -17,9 +18,19 @@ import {
   RecordingPresets,
   setAudioModeAsync,
 } from 'expo-audio';
-import { insertIncident, uploadAudio, createPassengerPairingCode, MOCK_MODE } from '../lib/supabase';
-import { getPairingCode, getPassengerName, setPairingCode } from '../lib/storage';
-import { getLocation } from '../lib/location';
+import {
+  insertIncident,
+  updateIncident,
+  uploadAudio,
+  createPassengerPairingCode,
+  MOCK_MODE,
+} from '../lib/supabase';
+import {
+  getPairingCode,
+  getPassengerName,
+  setPairingCode,
+} from '../lib/storage';
+import { getLocationFast, getLocationAccurate } from '../lib/location';
 import { requestAudioPermission } from '../lib/audio';
 import { COLORS } from '../lib/theme';
 
@@ -51,19 +62,19 @@ export default function BlackScreen({ passengerId }) {
     ...RecordingPresets.HIGH_QUALITY,
     isMeteringEnabled: true,
   });
+
   const recorderState = useAudioRecorderState(audioRecorder, 500);
 
-  // Load existing pairing code & name on mount
   useEffect(() => {
     (async () => {
       const storedCode = await getPairingCode();
       const storedName = await getPassengerName();
+
       if (storedCode) setPairingCodeStr(storedCode);
       if (storedName) setPassengerNameStr(storedName);
     })();
   }, []);
 
-  // Start recording on mount
   useEffect(() => {
     if (MOCK_MODE) {
       console.log('[MOCK] audio monitoring active — passenger:', activePassengerId);
@@ -74,41 +85,59 @@ export default function BlackScreen({ passengerId }) {
 
     (async () => {
       const granted = await requestAudioPermission();
+
       if (!granted || !mounted) return;
 
-      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
+      });
+
       await audioRecorder.prepareToRecordAsync();
       audioRecorder.record();
     })();
 
     return () => {
       mounted = false;
+
       try {
-        if (audioRecorder.isRecording) audioRecorder.stop();
+        if (audioRecorder.isRecording) {
+          audioRecorder.stop();
+        }
       } catch {}
     };
   }, []);
 
-  // Audio threshold detection
   useEffect(() => {
     if (MOCK_MODE || hasTriggeredRef.current) return;
+
     const metering = recorderState.metering;
+
     if (metering === undefined || metering === null) return;
 
     const dB = 20 * Math.log10(Math.abs(metering) || 0.001);
+
     if (dB > RMS_THRESHOLD) {
       hasTriggeredRef.current = true;
       triggerSOS('audio');
     }
   }, [recorderState.metering]);
 
-  // Status overlay animation
   useEffect(() => {
     if (status === STATUS.LISTENING) return;
+
     Animated.sequence([
-      Animated.timing(overlayOpacity, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.timing(overlayOpacity, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
       Animated.delay(1800),
-      Animated.timing(overlayOpacity, { toValue: 0, duration: 400, useNativeDriver: true }),
+      Animated.timing(overlayOpacity, {
+        toValue: 0,
+        duration: 400,
+        useNativeDriver: true,
+      }),
     ]).start(() => {
       if (status === STATUS.SENT || status === STATUS.ERROR) {
         setStatus(STATUS.LISTENING);
@@ -119,39 +148,77 @@ export default function BlackScreen({ passengerId }) {
 
   const triggerSOS = async (triggerType = 'manual') => {
     if (status === STATUS.SENDING) return;
+
     setStatus(STATUS.SENDING);
 
     try {
-      const coords = await getLocation();
+      // Fast path only: cached GPS fix, no audio wait. This is the entire
+      // hot path to the watcher's dashboard — keep it to one round trip.
+      const coords = await getLocationFast();
 
-      let audioUrl = null;
-      if (!MOCK_MODE && audioRecorder.isRecording) {
-        await audioRecorder.stop();
-        audioUrl = audioRecorder.uri ? await uploadAudio(audioRecorder.uri) : null;
-        await audioRecorder.prepareToRecordAsync();
-        audioRecorder.record();
-      } else if (MOCK_MODE) {
-        audioUrl = 'mock://audio/sample-distress.m4a';
-      }
-
-      const { error } = await insertIncident({
+      const { data, error } = await insertIncident({
         passenger_id: activePassengerId,
         latitude: coords.latitude,
         longitude: coords.longitude,
         trigger_type: triggerType,
-        audio_url: audioUrl,
+        audio_url: null,
       });
 
-      if (!error) {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Heavy);
-        setStatus(STATUS.SENT);
-      } else {
+      if (error) {
         console.log('[triggerSOS] insert error:', error.message);
         setStatus(STATUS.ERROR);
+        return;
+      }
+
+      // Watcher has the ping now. Everything below is refinement and
+      // runs after the fact — never blocks the alert itself.
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Heavy);
+      setStatus(STATUS.SENT);
+
+      const incidentId = data?.id;
+      refineIncident(incidentId, triggerType);
+    } catch (error) {
+      console.log('[triggerSOS] failed:', error.message);
+      setStatus(STATUS.ERROR);
+    }
+  };
+
+  // Backfills accurate GPS and the audio clip onto an incident that's
+  // already been sent. Fire-and-forget: errors here never flip the UI
+  // to STATUS.ERROR, since the watcher has already been alerted.
+  const refineIncident = async (incidentId, triggerType) => {
+    if (!incidentId) return;
+
+    const patch = {};
+
+    try {
+      const accurate = await getLocationAccurate();
+      if (accurate) {
+        patch.latitude = accurate.latitude;
+        patch.longitude = accurate.longitude;
       }
     } catch (e) {
-      console.log('[triggerSOS] failed:', e.message);
-      setStatus(STATUS.ERROR);
+      console.log('[refineIncident] location failed:', e.message);
+    }
+
+    try {
+      if (!MOCK_MODE && audioRecorder.isRecording) {
+        await audioRecorder.stop();
+        if (audioRecorder.uri) {
+          patch.audio_url = await uploadAudio(audioRecorder.uri);
+        }
+        await audioRecorder.prepareToRecordAsync();
+        audioRecorder.record();
+      } else if (MOCK_MODE) {
+        patch.audio_url = 'mock://audio/sample-distress.m4a';
+      }
+    } catch (e) {
+      console.log('[refineIncident] audio failed:', e.message);
+    }
+
+    if (Object.keys(patch).length > 0) {
+      const { error } = await updateIncident(incidentId, patch);
+      if (error) console.log('[refineIncident] update error:', error.message);
     }
   };
 
@@ -160,12 +227,19 @@ export default function BlackScreen({ passengerId }) {
 
     if (tapCountRef.current >= 2) {
       tapCountRef.current = 0;
-      if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
+
+      if (tapTimerRef.current) {
+        clearTimeout(tapTimerRef.current);
+      }
+
       triggerSOS('manual');
       return;
     }
 
-    if (tapTimerRef.current) clearTimeout(tapTimerRef.current);
+    if (tapTimerRef.current) {
+      clearTimeout(tapTimerRef.current);
+    }
+
     tapTimerRef.current = setTimeout(() => {
       tapCountRef.current = 0;
     }, 600);
@@ -173,79 +247,120 @@ export default function BlackScreen({ passengerId }) {
 
   const handleGenerateNewCode = async () => {
     setGeneratingCode(true);
+
     try {
-      const codeData = await createPassengerPairingCode(activePassengerId, passengerNameStr || 'Passenger');
+      const codeData = await createPassengerPairingCode(
+        activePassengerId,
+        passengerNameStr || 'Passenger',
+      );
+
       const code = codeData?.code || 'AEGIS1';
+
       await setPairingCode(code);
       setPairingCodeStr(code);
-    } catch (e) {
-      console.log('[BlackScreen] Code generation error:', e.message);
+    } catch (error) {
+      console.log('[BlackScreen] Code generation error:', error.message);
     } finally {
       setGeneratingCode(false);
     }
   };
 
   const overlayColor =
-    status === STATUS.SENDING ? COLORS.red
-    : status === STATUS.SENT   ? COLORS.green
-    : status === STATUS.ERROR  ? COLORS.red
-    : 'transparent';
+    status === STATUS.SENDING
+      ? COLORS.red
+      : status === STATUS.SENT
+        ? COLORS.green
+        : status === STATUS.ERROR
+          ? COLORS.red
+          : 'transparent';
 
   const overlayText =
-    status === STATUS.SENDING ? 'Sending SOS...'
-    : status === STATUS.SENT  ? 'Alert sent'
-    : status === STATUS.ERROR ? 'Failed — tap again'
-    : '';
+    status === STATUS.SENDING
+      ? 'Sending SOS...'
+      : status === STATUS.SENT
+        ? 'Alert sent'
+        : status === STATUS.ERROR
+          ? 'Failed — tap again'
+          : '';
 
   return (
     <Pressable style={styles.flex} onPress={handleTap}>
       <View style={styles.screen}>
         <StatusBar hidden />
 
-        {/* Subtle Watcher Pairing Code Button (Top Right) */}
+        <View pointerEvents="none" style={styles.doubleTapHint}>
+          <Text style={styles.doubleTapHintText}>
+            DOUBLE TAP ANYWHERE TO SEND AN ALERT
+          </Text>
+        </View>
+
         <TouchableOpacity
           style={styles.pairButton}
           onPress={() => setModalVisible(true)}
           activeOpacity={0.6}
         >
-          <Text style={styles.pairButtonText}>⚙ Watcher Code</Text>
+          <Text style={styles.pairButtonText}>☰ MENU</Text>
         </TouchableOpacity>
 
         <Animated.View
-          style={[styles.overlay, { opacity: overlayOpacity, backgroundColor: overlayColor }]}
+          style={[
+            styles.overlay,
+            {
+              opacity: overlayOpacity,
+              backgroundColor: overlayColor,
+            },
+          ]}
           pointerEvents="none"
         >
           <Text style={styles.overlayText}>{overlayText}</Text>
         </Animated.View>
 
-        {/* Tiny debug dot */}
         <Text style={styles.debug}>
           {MOCK_MODE ? 'M' : 'L'} · {status === STATUS.LISTENING ? '◉' : '⏳'}
         </Text>
 
-        {/* Pairing Code Modal */}
         <Modal
           visible={modalVisible}
           animationType="slide"
-          transparent={true}
+          transparent
           onRequestClose={() => setModalVisible(false)}
         >
           <View style={styles.modalOverlay}>
             <View style={styles.modalCard}>
-              <Text style={styles.modalTitle}>Passenger Pairing Code</Text>
+              <Text style={styles.modalEyebrow}>PASSENGER CONTROL</Text>
+
+              <Text style={styles.modalTitle}>Your safety shield.</Text>
+
               <Text style={styles.modalSub}>
-                Give this 6-digit code to your watcher to let them add you on the Aegis Dashboard.
+                Your watcher code lets someone you trust monitor your journey.
+                Double tap the black screen whenever you need help.
               </Text>
 
+              <View style={styles.statusCard}>
+                <View style={styles.statusDot} />
+
+                <View style={styles.statusTextContainer}>
+                  <Text style={styles.statusTitle}>MONITORING ACTIVE</Text>
+                  <Text style={styles.statusDescription}>
+                    Aegis is ready to send an emergency alert.
+                  </Text>
+                </View>
+              </View>
+
               <View style={styles.codeContainer}>
-                <Text style={styles.codeTitle}>YOUR ADDING CODE</Text>
+                <Text style={styles.codeTitle}>YOUR WATCHER CODE</Text>
+
                 <Text style={styles.codeVal}>
                   {pairingCodeStr || '------'}
+                </Text>
+
+                <Text style={styles.codeHint}>
+                  Share only with a trusted watcher.
                 </Text>
               </View>
 
               <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>Passenger ID:</Text>
+                <Text style={styles.infoLabel}>PASSENGER ID</Text>
                 <Text style={styles.infoVal}>{activePassengerId}</Text>
               </View>
 
@@ -253,11 +368,12 @@ export default function BlackScreen({ passengerId }) {
                 style={styles.genBtn}
                 onPress={handleGenerateNewCode}
                 disabled={generatingCode}
+                activeOpacity={0.8}
               >
                 {generatingCode ? (
-                  <ActivityIndicator color="#fff" size="small" />
+                  <ActivityIndicator color="#111111" size="small" />
                 ) : (
-                  <Text style={styles.genBtnText}>Generate New Code</Text>
+                  <Text style={styles.genBtnText}>GENERATE NEW CODE</Text>
                 )}
               </TouchableOpacity>
 
@@ -265,7 +381,7 @@ export default function BlackScreen({ passengerId }) {
                 style={styles.closeBtn}
                 onPress={() => setModalVisible(false)}
               >
-                <Text style={styles.closeBtnText}>Return to Black Screen</Text>
+                <Text style={styles.closeBtnText}>RETURN TO SAFETY SCREEN</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -276,126 +392,224 @@ export default function BlackScreen({ passengerId }) {
 }
 
 const styles = StyleSheet.create({
-  flex: { flex: 1 },
-  screen: { flex: 1, backgroundColor: '#000000' },
+  flex: {
+    flex: 1,
+  },
+
+  screen: {
+    flex: 1,
+    backgroundColor: '#080909',
+  },
+
+  doubleTapHint: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 42,
+    alignItems: 'center',
+  },
+
+  doubleTapHintText: {
+    color: '#77736d',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.1,
+  },
+
   overlay: {
     ...StyleSheet.absoluteFillObject,
     justifyContent: 'center',
     alignItems: 'center',
   },
+
   overlayText: {
     color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
-    letterSpacing: 1,
+    fontSize: 16,
+    fontWeight: '900',
+    letterSpacing: 1.1,
   },
+
   pairButton: {
     position: 'absolute',
-    top: 40,
-    right: 16,
+    top: 42,
+    right: 20,
     zIndex: 20,
     paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: '#4b473f',
+    backgroundColor: 'rgba(14, 15, 15, 0.92)',
   },
+
   pairButtonText: {
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontSize: 11,
-    fontWeight: '600',
+    color: '#ded6c9',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.9,
   },
+
   debug: {
     position: 'absolute',
-    bottom: 6,
-    right: 8,
-    color: '#111111',
+    right: 14,
+    bottom: 12,
+    color: '#4e4b46',
     fontSize: 9,
   },
+
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.85)',
-    justifyContent: 'center',
-    padding: 24,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.78)',
   },
+
   modalCard: {
-    backgroundColor: '#1E293B',
-    borderRadius: 20,
-    padding: 24,
-    alignItems: 'center',
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginBottom: 8,
-  },
-  modalSub: {
-    fontSize: 13,
-    color: '#94A3B8',
-    textAlign: 'center',
-    marginBottom: 20,
-    lineHeight: 18,
-  },
-  codeContainer: {
-    backgroundColor: '#0F172A',
-    borderColor: '#38BDF8',
-    borderWidth: 2,
-    borderRadius: 16,
-    paddingVertical: 18,
+    paddingTop: 30,
     paddingHorizontal: 24,
+    paddingBottom: Platform.OS === 'ios' ? 38 : 28,
+    borderTopWidth: 1,
+    borderColor: '#403e39',
+    backgroundColor: '#111212',
+  },
+
+  modalEyebrow: {
+    marginBottom: 9,
+    color: '#a99f90',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.3,
+  },
+
+  modalTitle: {
+    color: '#f5f2eb',
+    fontSize: 27,
+    fontWeight: '900',
+    letterSpacing: -1.1,
+  },
+
+  modalSub: {
+    marginTop: 10,
+    marginBottom: 22,
+    color: '#aaa39a',
+    fontSize: 13,
+    lineHeight: 19,
+  },
+
+  statusCard: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 14,
+    padding: 15,
+    borderWidth: 1,
+    borderColor: '#345746',
+    backgroundColor: '#101714',
+  },
+
+  statusDot: {
+    width: 8,
+    height: 8,
+    marginTop: 4,
+    marginRight: 10,
+    borderRadius: 99,
+    backgroundColor: '#62bd93',
+  },
+
+  statusTextContainer: {
+    flex: 1,
+  },
+
+  statusTitle: {
+    color: '#8fcbab',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.1,
+  },
+
+  statusDescription: {
+    marginTop: 5,
+    color: '#a2aba4',
+    fontSize: 12,
+    lineHeight: 17,
+  },
+
+  codeContainer: {
     alignItems: 'center',
     width: '100%',
     marginBottom: 16,
+    paddingVertical: 23,
+    paddingHorizontal: 18,
+    borderWidth: 1,
+    borderColor: '#806c4c',
+    backgroundColor: '#151411',
   },
+
   codeTitle: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#94A3B8',
-    letterSpacing: 1.5,
-    marginBottom: 6,
+    marginBottom: 10,
+    color: '#c5b99f',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 1.25,
   },
+
   codeVal: {
+    color: '#f5f2eb',
     fontSize: 34,
     fontWeight: '900',
-    color: '#38BDF8',
-    letterSpacing: 4,
+    letterSpacing: 5,
   },
+
+  codeHint: {
+    marginTop: 10,
+    color: '#928a7e',
+    fontSize: 11,
+  },
+
   infoRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    alignSelf: 'flex-start',
     marginBottom: 20,
   },
+
   infoLabel: {
-    fontSize: 12,
-    color: '#64748B',
-    marginRight: 6,
+    marginRight: 8,
+    color: '#77736d',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.6,
   },
+
   infoVal: {
-    fontSize: 12,
-    color: '#CBD5E1',
+    color: '#aaa39a',
+    fontSize: 10,
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
+
   genBtn: {
-    backgroundColor: '#0284C7',
-    paddingVertical: 14,
-    borderRadius: 12,
-    width: '100%',
     alignItems: 'center',
-    marginBottom: 10,
+    justifyContent: 'center',
+    width: '100%',
+    minHeight: 50,
+    marginBottom: 8,
+    backgroundColor: '#f3efe7',
   },
+
   genBtnText: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-    fontSize: 14,
+    color: '#111111',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.8,
   },
+
   closeBtn: {
-    paddingVertical: 12,
-    width: '100%',
     alignItems: 'center',
+    width: '100%',
+    paddingVertical: 14,
   },
+
   closeBtnText: {
-    color: '#94A3B8',
-    fontSize: 13,
-    fontWeight: '600',
+    color: '#aaa39a',
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.85,
   },
 });
