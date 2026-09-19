@@ -34,3 +34,22 @@ pnpm dev
 
 Opens at `localhost:3000`. Landing page explains both sides of the product;
 `/login` is the passcode gate for watchers, default passcode is `1234` unless
+overridden in `.env.local`.
+
+## Connecting to a real backend
+
+Both apps run in mock mode until real Supabase keys are provided. See
+`aegis-backend-handoff.md` for the full setup: run `aegis-schema.sql` in the
+Supabase SQL editor, then drop the project URL and anon key into:
+
+- `aegis-passenger/.env` (copy from `aegis-passenger/.env.example`)
+- `aegis-watcher/.env.local` (copy from `aegis-watcher/.env.example`)
+
+Both apps auto-detect real keys and switch out of mock mode with no code
+changes needed.
+
+## Stack
+
+- **Passenger**: Expo SDK 57, React Native, expo-audio, expo-location
+- **Watcher**: Next.js 15 App Router, TypeScript, Leaflet
+- **Backend**: Supabase (Postgres, Realtime, Storage)
