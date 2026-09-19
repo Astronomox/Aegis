@@ -57,6 +57,15 @@ create index if not exists idx_pairing_codes_code on pairing_codes(code);
 create index if not exists idx_pairing_codes_passenger_id on pairing_codes(passenger_id);
 create index if not exists idx_pairing_codes_expires_at on pairing_codes(expires_at);
 
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'pairing_codes_passenger_id_key'
+  ) then
+    alter table pairing_codes add constraint pairing_codes_passenger_id_key unique (passenger_id);
+  end if;
+end $$;
+
 -- ============================================
 -- ENABLE REALTIME (skip if already added)
 -- ============================================

@@ -148,19 +148,35 @@ export default function PassengerMainScreen({ passengerId: initialPassengerId })
 
   const loadProfile = async () => {
     try {
-      const [emContact, code, storedId] = await Promise.all([
+      const [emContact, storedCode, storedId, storedName] = await Promise.all([
         getEmergencyContact(),
         getPairingCode(),
         getPassengerId(),
+        getPassengerName(),
       ]);
 
       const currentId = storedId || passengerId;
-      if (emContact && code) {
+      if (storedName) setPassengerNameState(storedName);
+
+      let activeCode = storedCode;
+      if (!activeCode) {
+        const result = await createPassengerPairingCode(currentId, storedName || 'Passenger');
+        if (result && result.code) {
+          activeCode = result.code;
+          await setPairingCode(activeCode);
+        }
+      }
+
+      if (activeCode) {
+        setPairingCodeState(activeCode);
+      }
+
+      if (emContact && activeCode) {
         setProfileComplete(true);
       }
 
-      getPassengerName().then((name) => name && setPassengerNameState(name));
       getEmergencyContactName().then((name) => name && setEmContactName(name));
+      getEmergencyContact().then((phone) => phone && setEmContactPhone(phone));
       getHealthConditions().then((health) => health.length > 0 && setSelectedHealth(health));
       getDisabilities().then((d) => d.length > 0 && setSelectedDisabilities(d));
       getPassengerId().then((id) => id && setPassengerIdState(id));

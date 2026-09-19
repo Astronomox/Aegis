@@ -24,28 +24,30 @@ export function saveLocalProfile(passengerId: string, profile: PassengerProfile)
 }
 
 export async function fetchPassengerProfile(passengerId: string): Promise<PassengerProfile> {
-  // 1. Check local storage
-  const localMap = getLocalProfiles();
-  if (localMap[passengerId]) {
-    return localMap[passengerId];
-  }
-
-  // 2. Check Supabase
+  // 1. Check Supabase Live DB first
   if (!MOCK_MODE && supabase) {
     try {
+      // Query by passenger_id or pairing_code
       const { data } = await supabase
         .from('passenger_profiles')
         .select('*')
-        .eq('passenger_id', passengerId)
+        .or(`passenger_id.eq.${passengerId},pairing_code.eq.${passengerId}`)
         .maybeSingle();
 
       if (data) {
         saveLocalProfile(passengerId, data as PassengerProfile);
+        saveLocalProfile((data as PassengerProfile).passenger_id, data as PassengerProfile);
         return data as PassengerProfile;
       }
     } catch (e) {
-      console.error(e);
+      console.error('Error fetching Supabase passenger profile:', e);
     }
+  }
+
+  // 2. Check local storage
+  const localMap = getLocalProfiles();
+  if (localMap[passengerId]) {
+    return localMap[passengerId];
   }
 
   // 3. Known static mock profiles (for demo accounts)
@@ -54,7 +56,7 @@ export async function fetchPassengerProfile(passengerId: string): Promise<Passen
   }
 
   // 4. Default clean profile (no fake demo health/disabilities!)
-  const codeLabel = passengerId.replace('passenger-', '');
+  const codeLabel = passengerId.replace(/^passenger-|^p-/, '');
   return {
     id: passengerId,
     passenger_id: passengerId,
