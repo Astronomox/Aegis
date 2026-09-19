@@ -1,0 +1,15 @@
+{
+  "name": "aegis",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently --names \"passenger,watcher\" --prefix-colors \"cyan,magenta\" \"pnpm --filter aegis-passenger start\" \"pnpm --filter aegis-watcher dev\"",
+    "passenger": "pnpm --filter aegis-passenger start",
+    "watcher": "pnpm --filter aegis-watcher dev",
+    "build": "pnpm --filter aegis-watcher build",
+    "install:all": "pnpm install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.0"
+  }
+}

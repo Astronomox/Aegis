@@ -19,7 +19,9 @@ import { getLocation } from '../lib/location';
 import { requestAudioPermission } from '../lib/audio';
 import { COLORS } from '../lib/theme';
 
-const PASSENGER_ID = 'demo-passenger-001';
+// Fallback used only in mock mode or if passengerId is somehow missing
+const FALLBACK_PASSENGER_ID = 'demo-passenger-001';
+
 const RMS_THRESHOLD = 85;
 
 const STATUS = {
@@ -29,24 +31,25 @@ const STATUS = {
   ERROR: 'error',
 };
 
-export default function BlackScreen() {
+export default function BlackScreen({ passengerId }) {
+  const activePassengerId = passengerId || FALLBACK_PASSENGER_ID;
+
   const [status, setStatus] = useState(STATUS.LISTENING);
   const tapCountRef = useRef(0);
   const tapTimerRef = useRef(null);
   const overlayOpacity = useRef(new Animated.Value(0)).current;
   const hasTriggeredRef = useRef(false);
 
-  // expo-audio hooks: recorder must live inside the component, not a lib file
   const audioRecorder = useAudioRecorder({
     ...RecordingPresets.HIGH_QUALITY,
     isMeteringEnabled: true,
   });
-  const recorderState = useAudioRecorderState(audioRecorder, 500); // poll every 500ms
+  const recorderState = useAudioRecorderState(audioRecorder, 500);
 
-  // Start recording on mount (mock mode skips this entirely)
+  // Start recording on mount
   useEffect(() => {
     if (MOCK_MODE) {
-      console.log('[MOCK] audio monitoring active (no real mic)');
+      console.log('[MOCK] audio monitoring active — passenger:', activePassengerId);
       return;
     }
 
@@ -69,7 +72,7 @@ export default function BlackScreen() {
     };
   }, []);
 
-  // Watch metering for RMS threshold breach
+  // Audio threshold detection
   useEffect(() => {
     if (MOCK_MODE || hasTriggeredRef.current) return;
     const metering = recorderState.metering;
@@ -82,7 +85,7 @@ export default function BlackScreen() {
     }
   }, [recorderState.metering]);
 
-  // Flash status overlay
+  // Status overlay animation
   useEffect(() => {
     if (status === STATUS.LISTENING) return;
     Animated.sequence([
@@ -104,12 +107,10 @@ export default function BlackScreen() {
     try {
       const coords = await getLocation();
 
-      // Grab whatever's been recorded so far as the distress clip
       let audioUrl = null;
       if (!MOCK_MODE && audioRecorder.isRecording) {
         await audioRecorder.stop();
         audioUrl = audioRecorder.uri ? await uploadAudio(audioRecorder.uri) : null;
-        // Restart recording for continuous monitoring
         await audioRecorder.prepareToRecordAsync();
         audioRecorder.record();
       } else if (MOCK_MODE) {
@@ -117,7 +118,7 @@ export default function BlackScreen() {
       }
 
       const { error } = await insertIncident({
-        passenger_id: PASSENGER_ID,
+        passenger_id: activePassengerId,
         latitude: coords.latitude,
         longitude: coords.longitude,
         trigger_type: triggerType,
@@ -128,6 +129,7 @@ export default function BlackScreen() {
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Heavy);
         setStatus(STATUS.SENT);
       } else {
+        console.log('[triggerSOS] insert error:', error.message);
         setStatus(STATUS.ERROR);
       }
     } catch (e) {
@@ -154,14 +156,14 @@ export default function BlackScreen() {
 
   const overlayColor =
     status === STATUS.SENDING ? COLORS.red
-    : status === STATUS.SENT ? COLORS.green
-    : status === STATUS.ERROR ? COLORS.red
+    : status === STATUS.SENT   ? COLORS.green
+    : status === STATUS.ERROR  ? COLORS.red
     : 'transparent';
 
   const overlayText =
     status === STATUS.SENDING ? 'Sending SOS...'
-    : status === STATUS.SENT ? 'Alert sent'
-    : status === STATUS.ERROR ? 'Failed, tap again'
+    : status === STATUS.SENT  ? 'Alert sent'
+    : status === STATUS.ERROR ? 'Failed — tap again'
     : '';
 
   return (
@@ -176,6 +178,7 @@ export default function BlackScreen() {
           <Text style={styles.overlayText}>{overlayText}</Text>
         </Animated.View>
 
+        {/* Tiny debug dot — invisible in real use */}
         <Text style={styles.debug}>
           {MOCK_MODE ? 'M' : 'L'} · {status === STATUS.LISTENING ? '◉' : '⏳'}
         </Text>
@@ -187,7 +190,22 @@ export default function BlackScreen() {
 const styles = StyleSheet.create({
   flex: { flex: 1 },
   screen: { flex: 1, backgroundColor: '#000000' },
-  overlay: { ...StyleSheet.absoluteFillObject, justifyContent: 'center', alignItems: 'center' },
-  overlayText: { color: '#FFFFFF', fontSize: 18, fontWeight: '700', letterSpacing: 1 },
-  debug: { position: 'absolute', bottom: 6, right: 8, color: '#111111', fontSize: 9 },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  overlayText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
+  debug: {
+    position: 'absolute',
+    bottom: 6,
+    right: 8,
+    color: '#111111',
+    fontSize: 9,
+  },
 });

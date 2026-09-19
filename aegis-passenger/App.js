@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useCallback } from 'react';
-import { Image } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import * as Location from 'expo-location';
@@ -9,12 +8,15 @@ import SplashScreen from './screens/SplashScreen';
 import PermissionsScreen from './screens/PermissionsScreen';
 import BlackScreen from './screens/BlackScreen';
 import OnboardingScreen from './screens/OnboardingScreen';
+import { getHasOnboarded, getPassengerId } from './lib/storage';
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
   const [permissionsGranted, setPermissionsGranted] = useState(null);
   const [hasOnboarded, setHasOnboarded] = useState(false);
+  // Real passenger ID from DB (or 'demo-passenger-001' in mock mode)
+  const [passengerId, setPassengerId] = useState(null);
 
   const checkPermissions = useCallback(async () => {
     try {
@@ -26,10 +28,26 @@ export default function App() {
     }
   }, []);
 
+  // On boot: load persisted state then check permissions
   useEffect(() => {
-    const timer = setTimeout(() => checkPermissions(), 2000);
-    return () => clearTimeout(timer);
+    (async () => {
+      const [onboarded, storedId] = await Promise.all([
+        getHasOnboarded(),
+        getPassengerId(),
+      ]);
+      if (onboarded && storedId) {
+        setHasOnboarded(true);
+        setPassengerId(storedId);
+      }
+      // Small splash delay then check permissions
+      setTimeout(() => checkPermissions(), 1500);
+    })();
   }, [checkPermissions]);
+
+  const handleOnboardingComplete = (id) => {
+    setPassengerId(id);
+    setHasOnboarded(true);
+  };
 
   return (
     <NavigationContainer>
@@ -50,12 +68,19 @@ export default function App() {
             {(props) => (
               <OnboardingScreen
                 {...props}
-                onComplete={() => setHasOnboarded(true)}
+                onComplete={handleOnboardingComplete}
               />
             )}
           </Stack.Screen>
         ) : (
-          <Stack.Screen name="BlackScreen" component={BlackScreen} />
+          <Stack.Screen name="BlackScreen">
+            {(props) => (
+              <BlackScreen
+                {...props}
+                passengerId={passengerId}
+              />
+            )}
+          </Stack.Screen>
         )}
       </Stack.Navigator>
     </NavigationContainer>
