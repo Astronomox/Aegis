@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AEGIS — Silent Protection for Nigerian Commuters</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --color-paper:        #F7F5F0;
+    --color-paper-2:      #EFECE6;
+    --color-paper-3:      #E5E1D8;
+    --color-ink:          #1A1918;
+    --color-muted:        #666360;
+    --color-rule:         #D9D5CB;
+    --color-accent:       #C8321B;
+    --color-accent-light: #FBF0EE;
+    --color-accent-dim:   rgba(200, 50, 27, 0.08);
+
+    --font-display: "DM Serif Display", Georgia, serif;
+    --font-body:    "IBM Plex Sans", -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono:    "IBM Plex Mono", "SF Mono", Consolas, monospace;
+
+    --text-xs:   0.75rem;
+    --text-sm:   0.875rem;
+    --text-base: 1rem;
+    --text-md:   1.125rem;
+    --text-lg:   1.375rem;
+    --text-xl:   1.75rem;
+    --text-2xl:  2.25rem;
+    --text-3xl:  3rem;
+
+    --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  html, body {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    font-family: var(--font-body);
+    font-size: 16px;
+    color: var(--color-ink);
+    background: var(--color-paper);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── Slide System ── */
+  .deck {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    padding: 7vh 9vw;
+    opacity: 0;
+    transform: translateY(12px);
+    transition: opacity 0.35s var(--ease-out), transform 0.35s var(--ease-out);
+  }
+
+  .slide.active {
+    display: flex;
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* ── Header Bar ── */
+  .top-bar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 48px;
+    padding: 0 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 90;
+    pointer-events: none;
+  }
+
+  .brand-logo {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: 0.15em;
+    color: var(--color-ink);
+    text-transform: uppercase;
+  }
+
+  .brand-tagline {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--color-muted);
+    letter-spacing: 0.05em;
+  }
+
+  /* ── Progress Bar ── */
+  .progress {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    background: var(--color-accent);
+    transition: width 0.35s var(--ease-out);
+    z-index: 100;
+  }
+
+  /* ── Controls & Counter ── */
+  .bottom-bar {
+    position: fixed;
+    bottom: 2rem;
+    left: 3rem; right: 3rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    z-index: 100;
+    pointer-events: auto;
+  }
+
+  .slide-counter {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--color-muted);
+    letter-spacing: 0.1em;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .btn {
+    height: 2.5rem;
+    padding: 0 1rem;
+    background: transparent;
+    border: 1px solid var(--color-rule);
+    color: var(--color-ink);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-weight: 500;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    transition: background 0.2s, border-color 0.2s;
+  }
+
+  .btn:hover {
+    border-color: var(--color-ink);
+    background: var(--color-paper-2);
+  }
+
+  .btn-icon {
+    width: 2.5rem;
+    padding: 0;
+  }
+
+  /* ── Overview Grid Modal ── */
+  .overview-modal {
+    position: fixed;
+    inset: 0;
+    background: rgba(247, 245, 240, 0.96);
+    backdrop-filter: blur(10px);
+    z-index: 200;
+    display: none;
+    flex-direction: column;
+    padding: 3rem;
+    overflow-y: auto;
+  }
+
+  .overview-modal.open { display: flex; }
+
+  .overview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+  }
+
+  .overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+  }
+
+  .thumb-card {
+    background: #fff;
+    border: 1px solid var(--color-rule);
+    padding: 1.5rem;
+    cursor: pointer;
+    transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+  }
+
+  .thumb-card:hover {
+    border-color: var(--color-accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.06);
+  }
+
+  .thumb-num {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--color-accent);
+    margin-bottom: 0.5rem;
+  }
+
+  .thumb-title {
+    font-family: var(--font-display);
+    font-size: var(--text-base);
+    color: var(--color-ink);
+  }
+
+  /* ── Typography & Layout ── */
+  .tag {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+    margin-bottom: 1.5rem;
+  }
+
+  h1, h2, h3 { font-family: var(--font-display); font-weight: 400; }
+
+  /* SLIDE 1 */
+  .slide-1 .stat-hero { margin-bottom: 2.5rem; }
+
+  .stat-hero .figure {
+    font-family: var(--font-display);
+    font-size: clamp(3.5rem, 8vw, 7rem);
+    line-height: 1;
+    color: var(--color-ink);
+    letter-spacing: -0.03em;
+  }
+
+  .stat-hero .qualifier {
+    font-size: var(--text-lg);
+    color: var(--color-muted);
+    margin-top: 1rem;
+    max-width: 42ch;
+    line-height: 1.45;
+  }
+
+  .stat-hero .source {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--color-muted);
+    margin-top: 0.5rem;
+  }
+
+  .supporting-stats {
+    display: flex;
+    gap: 4rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-rule);
+    max-width: 60rem;
+  }
+
+  .supporting-stat .num {
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    line-height: 1;
+    color: var(--color-accent);
+  }
+
+  .supporting-stat .label {
+    font-size: var(--text-sm);
+    color: var(--color-muted);
+    margin-top: 0.35rem;
+    max-width: 24ch;
+    line-height: 1.4;
+  }
+
+  /* SLIDE 2 */
+  .demo-layout {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 3rem;
+    margin-top: 2rem;
+    align-items: start;
+  }
+
+  .trigger-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .trigger-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--color-rule);
+  }
+
+  .trigger-num {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--color-accent);
+    font-weight: 600;
+    min-width: 1.75rem;
+    padding-top: 0.15rem;
+  }
+
+  .trigger-item h4 {
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+  }
+
+  .trigger-item p {
+    font-size: var(--text-sm);
+    color: var(--color-muted);
+    line-height: 1.5;
+  }
+
+  .dashboard-panel {
+    background: var(--color-paper-2);
+    border: 1px solid var(--color-rule);
+    padding: 1.5rem;
+    border-radius: 4px;
+  }
+
+  .dash-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid var(--color-rule);
+  }
+
+  .dash-header h4 {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--color-muted);
+  }
+
+  .dash-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--color-accent);
+    font-weight: 600;
+  }
+
+  .pulse {
+    width: 8px; height: 8px;
+    background: var(--color-accent);
+    border-radius: 50%;
+    animation: pulse 1.5s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.85); }
+  }
+
+  .dash-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .dash-cell {
+    padding: 0.75rem;
+    background: #fff;
+    border: 1px solid var(--color-rule);
+    border-radius: 2px;
+  }
+
+  .dash-cell .label {
+    font-family: var(--font-mono);
+    font-size: 0.65rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--color-muted);
+    margin-bottom: 0.25rem;
+  }
+
+  .dash-cell .value {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    font-weight: 600;
+  }
+
+  .dash-alert {
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--color-accent);
+    background: var(--color-accent-light);
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--color-accent);
+    font-weight: 600;
+    border-radius: 2px;
+  }
+
+  /* SLIDE 3 */
+  .tech-layout {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr;
+    gap: 3rem;
+    margin-top: 2rem;
+    align-items: start;
+  }
+
+  .flow-steps {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .flow-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 0.85rem 0;
+    border-bottom: 1px solid var(--color-rule);
+  }
+
+  .flow-step .step-num {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--color-accent);
+    font-weight: 600;
+    min-width: 1.5rem;
+  }
+
+  .flow-step h4 {
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    font-weight: 600;
+    margin-bottom: 0.2rem;
+  }
+
+  .flow-step p {
+    font-size: var(--text-sm);
+    color: var(--color-muted);
+  }
+
+  .coverage-block {
+    padding: 2rem;
+    background: var(--color-paper-2);
+    border: 1px solid var(--color-rule);
+    text-align: center;
+    border-radius: 4px;
+  }
+
+  .coverage-block .big {
+    font-family: var(--font-display);
+    font-size: clamp(3rem, 5vw, 4.5rem);
+    color: var(--color-ink);
+    line-height: 1;
+  }
+
+  .coverage-block .sub {
+    font-size: var(--text-sm);
+    color: var(--color-muted);
+    margin-top: 0.5rem;
+  }
+
+  .arch-notes {
+    margin-top: 1.5rem;
+    padding: 1rem 1.25rem;
+    border-left: 3px solid var(--color-accent);
+    background: var(--color-paper-2);
+  }
+
+  .arch-notes p {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--color-muted);
+    line-height: 1.6;
+  }
+
+  /* SLIDE 4 */
+  .trust-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-top: 2rem;
+  }
+
+  .trust-card {
+    padding: 1.5rem;
+    background: #fff;
+    border: 1px solid var(--color-rule);
+    border-radius: 4px;
+  }
+
+  .trust-card .icon {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--color-accent);
+    margin-bottom: 0.5rem;
+  }
+
+  .trust-card h3 {
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+  }
+
+  .trust-card p {
+    font-size: var(--text-sm);
+    color: var(--color-muted);
+    line-height: 1.5;
+  }
+
+  .trust-footer {
+    margin-top: 2rem;
+    padding: 1rem 1.5rem;
+    border-left: 3px solid var(--color-accent);
+    background: var(--color-paper-2);
+  }
+
+  .trust-footer p {
+    font-size: var(--text-base);
+    font-weight: 500;
+  }
+
+  /* SLIDE 5 */
+  .capital-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-top: 2rem;
+  }
+
+  .capital-card {
+    padding: 1.5rem;
+    background: #fff;
+    border: 1px solid var(--color-rule);
+    border-top: 3px solid var(--color-accent);
+    border-radius: 4px;
+  }
+
+  .capital-card:nth-child(2) { border-top-color: var(--color-muted); }
+  .capital-card:nth-child(3) { border-top-color: var(--color-ink); }
+
+  .capital-card .pct {
+    font-family: var(--font-display);
+    font-size: var(--text-2xl);
+    line-height: 1;
+    margin-bottom: 0.5rem;
+    color: var(--color-accent);
+  }
+  .capital-card:nth-child(2) .pct { color: var(--color-muted); }
+  .capital-card:nth-child(3) .pct { color: var(--color-ink); }
+
+  .capital-card h3 {
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    font-weight: 600;
+    margin-bottom: 0.35rem;
+  }
+
+  .capital-card p {
+    font-size: var(--text-sm);
+    color: var(--color-muted);
+    line-height: 1.5;
+  }
+
+  .closing {
+    margin-top: 2.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-rule);
+  }
+
+  .closing .revenue {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--color-muted);
+    margin-bottom: 0.75rem;
+    line-height: 1.5;
+  }
+
+  .closing .ask {
+    font-family: var(--font-body);
+    font-size: var(--text-lg);
+    font-weight: 700;
+    color: var(--color-accent);
+    margin-bottom: 0.25rem;
+  }
+
+  .closing .tagline {
+    font-family: var(--font-display);
+    font-size: var(--text-xl);
+    color: var(--color-ink);
+  }
+
+  /* ════════════════════════════════════════
+     PRINT STYLES — Perfect PDF & Print Export
+     ════════════════════════════════════════ */
+  @media print {
+    @page {
+      size: 11in 8.5in;
+      margin: 0;
+    }
+
+    html, body {
+      width: 11in !important;
+      height: auto !important;
+      overflow: visible !important;
+      background: #F7F5F0 !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    .top-bar, .progress, .bottom-bar, .overview-modal {
+      display: none !important;
+    }
+
+    .deck {
+      position: static !important;
+      width: 11in !important;
+      height: auto !important;
+      overflow: visible !important;
+    }
+
+    .slide {
+      position: relative !important;
+      inset: auto !important;
+      display: flex !important;
+      opacity: 1 !important;
+      transform: none !important;
+      width: 11in !important;
+      height: 8.5in !important;
+      max-height: 8.5in !important;
+      page-break-after: always !important;
+      break-after: page !important;
+      page-break-inside: avoid !important;
+      break-inside: avoid !important;
+      padding: 0.6in 0.8in !important;
+      box-sizing: border-box !important;
+      justify-content: center !important;
+      overflow: hidden !important;
+    }
+  }
+
+  /* Responsive Mobile Tweaks */
+  @media (max-width: 900px) {
+    .slide { padding: 5vh 6vw; }
+    .demo-layout, .tech-layout, .trust-grid, .capital-grid {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+    }
+    .supporting-stats { flex-direction: column; gap: 1.5rem; }
+    .bottom-bar { left: 1.5rem; right: 1.5rem; bottom: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+
+<div class="top-bar">
+  <div class="brand-logo">AEGIS</div>
+  <div class="brand-tagline">When Silence is Survival</div>
+</div>
+
+<div class="deck" id="deck">
+
+  <!-- SLIDE 1: STAT HERO -->
+  <div class="slide slide-1 active" data-slide="1">
+    <div class="tag">AEGIS — Silent Protection for Nigerian Commuters</div>
+    <div class="stat-hero">
+      <div class="figure">50%+</div>
+      <p class="qualifier">of interstate transport operators have experienced armed robbery on their routes.</p>
+      <p class="source">NBS Crime &amp; Security Perception Survey</p>
+    </div>
+    <div class="supporting-stats">
+      <div class="supporting-stat">
+        <span class="num">42%</span>
+        <span class="label">Operators faced kidnapping attempts</span>
+      </div>
+      <div class="supporting-stat">
+        <span class="num">29.1%</span>
+        <span class="label">Nigerians feel most unsafe in public transport</span>
+      </div>
+    </div>
+    <p style="font-size: var(--text-sm); color: var(--color-muted); margin-top: 2rem; max-width: 52ch; line-height: 1.5;">
+      Armed men surround your vehicle on the expressway. You cannot reach for your phone.
+      Calling for help means death. <strong style="color: var(--color-ink);">AEGIS protects you without you touching anything.</strong>
+    </p>
+  </div>
+
+  <!-- SLIDE 2: DEMO -->
+  <div class="slide slide-2" data-slide="2">
+    <div class="tag">Working Prototype</div>
+    <h1 style="font-size: var(--text-2xl); line-height: 1.15; max-width: 30ch;">How AEGIS Fires</h1>
+    <p style="color: var(--color-muted); font-size: var(--text-base); max-width: 45ch; margin-top: 0.5rem;">
+      The phone stays locked. Two sensors detect the attack. Your family gets alerted in seconds.
+    </p>
+
+    <div class="demo-layout">
+      <div class="trigger-list">
+        <div class="trigger-item">
+          <span class="trigger-num">01</span>
+          <div>
+            <h4>Accelerometer + Gyroscope</h4>
+            <p>Captures violent motion: snatch, drop, bag insertion. On-device ML classifies the pattern in real time.</p>
+          </div>
+        </div>
+        <div class="trigger-item">
+          <span class="trigger-num">02</span>
+          <div>
+            <h4>Audio Classification (Edge TFLite)</h4>
+            <p>Mic detects distress keywords and aggressive tone. Model runs on the phone's neural processing unit. No cloud round-trip.</p>
+          </div>
+        </div>
+        <div class="trigger-item">
+          <span class="trigger-num">03</span>
+          <div>
+            <h4>Watcher Dashboard (WebSocket Push)</h4>
+            <p>Family's browser receives alert in under 3 seconds. GPS coordinates, 5-second audio clip, device status.</p>
+          </div>
+        </div>
+        <div class="trigger-item">
+          <span class="trigger-num">04</span>
+          <div>
+            <h4>Zero Screen Activity</h4>
+            <p>Screen stays black. No notification sound. No vibration. Attackers see a dead phone.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="dashboard-panel">
+        <div class="dash-header">
+          <h4>Watcher Dashboard</h4>
+          <div class="dash-status"><div class="pulse"></div> LIVE ALERT</div>
+        </div>
+        <div class="dash-grid">
+          <div class="dash-cell">
+            <div class="label">Status</div>
+            <div class="value" style="color: var(--color-accent);">EMERGENCY</div>
+          </div>
+          <div class="dash-cell">
+            <div class="label">Triggers</div>
+            <div class="value">2 / 2</div>
+          </div>
+          <div class="dash-cell">
+            <div class="label">Last GPS Fix</div>
+            <div class="value">6.5244° N, 3.3792° E</div>
+          </div>
+          <div class="dash-cell">
+            <div class="label">Audio Evidence</div>
+            <div class="value">5s clip captured</div>
+          </div>
+        </div>
+        <div class="dash-alert">ALERT PUSHED — Family notified with audio + GPS</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 3: TECHNICAL -->
+  <div class="slide slide-3" data-slide="3">
+    <div class="tag">Technical Architecture</div>
+    <h1 style="font-size: var(--text-2xl); line-height: 1.15; max-width: 30ch;">Edge-First, Network-Agnostic</h1>
+    <p style="color: var(--color-muted); font-size: var(--text-base); max-width: 45ch; margin-top: 0.5rem;">
+      When 4G dies in forest corridors, AEGIS falls back to 2G SMS. The system does not depend on internet availability.
+    </p>
+
+    <div class="tech-layout">
+      <div class="flow-steps">
+        <div class="flow-step">
+          <span class="step-num">01</span>
+          <div>
+            <h4>GPS fix cached every 30 seconds</h4>
+            <p>Last-known coordinate survives signal loss</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <span class="step-num">02</span>
+          <div>
+            <h4>Alert compressed to &lt;160 bytes</h4>
+            <p>Fits a single GSM SMS packet</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <span class="step-num">03</span>
+          <div>
+            <h4>Falls back to 2G cellular</h4>
+            <p>Works where WhatsApp and data apps fail</p>
+          </div>
+        </div>
+        <div class="flow-step">
+          <span class="step-num">04</span>
+          <div>
+            <h4>Family receives GPS coordinates via SMS</h4>
+            <p>No app install required on their end</p>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="coverage-block">
+          <div class="big">~98%</div>
+          <div class="sub">2G SMS coverage across Nigeria</div>
+        </div>
+        <div class="arch-notes">
+          <p>Edge processing runs TensorFlow Lite models on the device's NPU. Audio classification completes in &lt;200ms. GPS cached to non-volatile memory every 30s. Alert packet: 140 bytes, CRC-16 checksum, base64-encoded coordinates.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SLIDE 4: TRUST -->
+  <div class="slide slide-4" data-slide="4">
+    <div class="tag">Built Around the Customer</div>
+    <h1 style="font-size: var(--text-2xl); line-height: 1.15; max-width: 30ch;">Trust Is the Product</h1>
+    <p style="color: var(--color-muted); font-size: var(--text-base); max-width: 50ch; margin-top: 0.5rem;">
+      Nigerians will not install a safety app that records them 24/7. We designed AEGIS so nothing leaves the device unless someone's life is at risk.
+    </p>
+
+    <div class="trust-grid">
+      <div class="trust-card">
+        <div class="icon">01</div>
+        <h3>On-Device Processing</h3>
+        <p>Audio classification runs on the phone's NPU using TensorFlow Lite. No cloud upload. No server sees your data.</p>
+      </div>
+      <div class="trust-card">
+        <div class="icon">02</div>
+        <h3>Auto-Wipe After Processing</h3>
+        <p>Audio buffer clears within 2 seconds of classification. Nothing persists beyond the detection window.</p>
+      </div>
+      <div class="trust-card">
+        <div class="icon">03</div>
+        <h3>Violence-Only Transmission</h3>
+        <p>The 5-second clip sends only when both triggers confirm an attack. False positives stay on-device.</p>
+      </div>
+      <div class="trust-card">
+        <div class="icon">04</div>
+        <h3>Dark by Design</h3>
+        <p>No notification. No LED. No vibration. Attackers see a phone that does nothing. The customer stays safe.</p>
+      </div>
+    </div>
+
+    <div class="trust-footer">
+      <p>The customer controls the data. Nothing is saved or sent unless their life depends on it.</p>
+    </div>
+  </div>
+
+  <!-- SLIDE 5: CAPITAL -->
+  <div class="slide slide-5" data-slide="5">
+    <div class="tag">Where Every Naira Goes</div>
+    <h1 style="font-size: var(--text-2xl); line-height: 1.15; max-width: 40ch;">Capital Allocation &amp; Revenue</h1>
+    <p style="color: var(--color-muted); font-size: var(--text-base); max-width: 50ch; margin-top: 0.5rem;">
+      We build in Nigeria, for Nigeria. Every naira goes to infrastructure that protects commuters on real roads.
+    </p>
+
+    <div class="capital-grid">
+      <div class="capital-card">
+        <div class="pct">40%</div>
+        <h3>SMS Pipeline &amp; Edge Infra</h3>
+        <p>Wholesale 2G SMS contracts with MTN and Airtel. Alert delivery server. Family notification system.</p>
+      </div>
+      <div class="capital-card">
+        <div class="pct">35%</div>
+        <h3>Fleet Distribution</h3>
+        <p>Partner with 5 major transport companies. Install at motor parks. Reach commuters at ticket checkout.</p>
+      </div>
+      <div class="capital-card">
+        <div class="pct">25%</div>
+        <h3>Engineering &amp; Testing</h3>
+        <p>Highway stress tests on Lagos-Ibadan and Abuja-Kaduna routes. Penetration testing. Sensor calibration.</p>
+      </div>
+    </div>
+
+    <div class="closing">
+      <p class="revenue">Per-device: ₦2,000/month · Fleet SaaS: ₦500/seat/month · Target: 500K commuters Year 1 · Break-even: 18 months</p>
+      <p class="ask">We are raising ₦25M seed to launch.</p>
+      <p class="tagline">AEGIS protects you silently when speaking could cost your life.</p>
+    </div>
+  </div>
+
+</div>
+
+<!-- Bottom Navigation Controls -->
+<div class="bottom-bar">
+  <div class="slide-counter" id="counter">1 / 5</div>
+  <div class="controls">
+    <button class="btn" onclick="toggleOverview()" title="View Grid (O)">Grid</button>
+    <button class="btn" onclick="toggleFullscreen()" title="Fullscreen (F)">Fullscreen</button>
+    <button class="btn btn-icon" onclick="prev()" title="Previous (←)">←</button>
+    <button class="btn btn-icon" onclick="next()" title="Next (→)">→</button>
+  </div>
+</div>
+
+<!-- Overview Grid Modal -->
+<div class="overview-modal" id="overview">
+  <div class="overview-header">
+    <div class="brand-logo">AEGIS — SLIDE OVERVIEW</div>
+    <button class="btn" onclick="toggleOverview()">Close (Esc)</button>
+  </div>
+  <div class="overview-grid">
+    <div class="thumb-card" onclick="jumpTo(0)">
+      <div class="thumb-num">SLIDE 01</div>
+      <div class="thumb-title">Problem &amp; Impact (50%+ Highway Threat)</div>
+    </div>
+    <div class="thumb-card" onclick="jumpTo(1)">
+      <div class="thumb-num">SLIDE 02</div>
+      <div class="thumb-title">How AEGIS Fires (Sensors &amp; Triggers)</div>
+    </div>
+    <div class="thumb-card" onclick="jumpTo(2)">
+      <div class="thumb-num">SLIDE 03</div>
+      <div class="thumb-title">Technical Architecture (2G SMS Fallback)</div>
+    </div>
+    <div class="thumb-card" onclick="jumpTo(3)">
+      <div class="thumb-num">SLIDE 04</div>
+      <div class="thumb-title">Customer Trust &amp; On-Device Privacy</div>
+    </div>
+    <div class="thumb-card" onclick="jumpTo(4)">
+      <div class="thumb-num">SLIDE 05</div>
+      <div class="thumb-title">Capital Allocation &amp; ₦25M Seed Ask</div>
+    </div>
+  </div>
+</div>
+
+<script>
+  let current = 0;
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  const progress = document.getElementById('progress');
+  const counter = document.getElementById('counter');
+  const overview = document.getElementById('overview');
+
+  function show(i) {
+    slides.forEach(s => s.classList.remove('active'));
+    slides[i].classList.add('active');
+    progress.style.width = ((i + 1) / total * 100) + '%';
+    counter.textContent = (i + 1) + ' / ' + total;
+  }
+
+  function next() { if (current < total - 1) { current++; show(current); } }
+  function prev() { if (current > 0) { current--; show(current); } }
+
+  function jumpTo(i) {
+    current = i;
+    show(current);
+    overview.classList.remove('open');
+  }
+
+  function toggleOverview() {
+    overview.classList.toggle('open');
+  }
+
+  function toggleFullscreen() {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') { e.preventDefault(); next(); }
+    if (e.key === 'ArrowLeft' || e.key === 'Backspace') { e.preventDefault(); prev(); }
+    if (e.key === 'Home') { current = 0; show(current); }
+    if (e.key === 'End') { current = total - 1; show(current); }
+    if (e.key.toLowerCase() === 'o') { toggleOverview(); }
+    if (e.key.toLowerCase() === 'f') { toggleFullscreen(); }
+    if (e.key === 'Escape') { overview.classList.remove('open'); }
+  });
+
+  let touchStartX = 0;
+  document.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; });
+  document.addEventListener('touchend', e => {
+    const diff = touchStartX - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) { diff > 0 ? next() : prev(); }
+  });
+
+  show(0);
+</script>
+
+</body>
+</html>

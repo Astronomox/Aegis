@@ -22,6 +22,7 @@ const NAV_LINKS = [
   { label: 'Live', path: '/dashboard' },
   { label: 'Passengers', path: '/dashboard/passengers' },
   { label: 'History', path: '/dashboard/history' },
+  { label: 'Pitch Deck', path: '/pitch-deck.html' },
 ];
 
 export default function AppTopBar({
