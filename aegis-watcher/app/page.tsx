@@ -132,3 +132,72 @@ export default function LandingPage() {
           }}>
             <p style={{ fontSize: 13, color: 'var(--text)', lineHeight: 1.6 }}>
               <strong>Important:</strong> Aegis currently works while the app is open
+              and the screen is on. Full background/locked-screen triggering is on
+              our roadmap for a future release.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* WATCHER SECTION */}
+      <section id="watcher" style={{ padding: '70px 24px' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+          <div style={{
+            display: 'inline-block', fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700,
+            color: 'var(--red)', letterSpacing: 2, background: 'var(--red-dim)',
+            padding: '5px 12px', borderRadius: 20, marginBottom: 16,
+          }}>FOR WATCHERS</div>
+
+          <h2 style={{ fontSize: 30, fontWeight: 800, marginBottom: 16 }}>
+            A live map. A real person watching.
+          </h2>
+          <p style={{ fontSize: 15, color: 'var(--text-dim)', lineHeight: 1.7, marginBottom: 40, maxWidth: 620 }}>
+            As a watcher, you're the trusted contact for someone traveling. Aegis
+            gives you a dashboard that turns silent into visible the moment it matters.
+          </p>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
+            {[
+              { step: '01', title: 'Get your access code', desc: 'The passenger you\'re watching over shares a passcode with you for the dashboard.' },
+              { step: '02', title: 'Open the dashboard', desc: 'Log in from any browser, phone or desktop. No app install required on your end.' },
+              { step: '03', title: 'See incidents live', desc: 'A triggered alert appears instantly on the map with location, trigger type, and audio if captured.' },
+              { step: '04', title: 'Act and resolve', desc: 'Open the location in Google Maps, listen to the audio clip, and mark the incident resolved once it\'s handled.' },
+            ].map((item) => (
+              <div key={item.step} style={{
+                padding: 20, background: '#fff', border: '1px solid rgba(0,0,0,0.06)', borderRadius: 10,
+              }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, color: 'var(--red)', marginBottom: 8 }}>
+                  {item.step}
+                </div>
+                <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>{item.title}</div>
+                <div style={{ fontSize: 13, color: 'var(--text-dim)', lineHeight: 1.5 }}>{item.desc}</div>
+              </div>
+            ))}
+          </div>
+
+          <div style={{ marginTop: 36, textAlign: 'center' }}>
+            <button
+              onClick={() => router.push('/login')}
+              style={{
+                fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 700,
+                color: '#fff', letterSpacing: 1,
+                background: 'var(--red)', padding: '14px 32px', borderRadius: 8,
+              }}
+            >OPEN WATCHER DASHBOARD →</button>
+          </div>
+        </div>
+      </section>
+
+      {/* FOOTER */}
+      <footer style={{
+        padding: '32px 24px', textAlign: 'center',
+        borderTop: '1px solid rgba(0,0,0,0.06)',
+      }}>
+        <img src="/aegis-logo.png" alt="AEGIS" style={{ height: 16, marginBottom: 10, opacity: 0.6 }} />
+        <p style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--text-muted)', letterSpacing: 1 }}>
+          BUILT FOR SAFER JOURNEYS · HACKATHON MVP
+        </p>
+      </footer>
+    </div>
+  );
+}
