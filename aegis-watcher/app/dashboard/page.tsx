@@ -190,3 +190,195 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {/* MOBILE DROPDOWN MENU - replaces top-bar buttons on small screens */}
+      {isMobile && mobileMenuOpen && (
+        <div style={{
+          position: 'absolute', top: 68, left: 16, right: 16, zIndex: 20,
+          background: 'var(--glass)', backdropFilter: 'var(--blur)',
+          border: '1px solid var(--glass-border)', borderRadius: 8,
+          overflow: 'hidden',
+        }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '12px 16px', borderBottom: '1px solid var(--glass-border)',
+          }}>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-dim)', letterSpacing: 1 }}>
+              {active.length} ACTIVE · {incidents.length} TOTAL
+            </span>
+            <div style={{
+              width: 6, height: 6, borderRadius: '50%',
+              background: active.length > 0 ? 'var(--red)' : 'var(--green)',
+              boxShadow: active.length > 0 ? '0 0 8px var(--red)' : '0 0 8px var(--green)',
+            }} />
+          </div>
+          <button
+            onClick={simulateIncident}
+            style={{
+              width: '100%', textAlign: 'left', padding: '14px 16px',
+              fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 600,
+              color: 'var(--red)', letterSpacing: 1, background: 'transparent',
+              borderBottom: '1px solid var(--glass-border)',
+            }}
+          >⚡ SIMULATE INCIDENT</button>
+          <button
+            onClick={() => { setMobileMenuOpen(false); router.push('/dashboard/history'); }}
+            style={{
+              width: '100%', textAlign: 'left', padding: '14px 16px',
+              fontFamily: 'var(--mono)', fontSize: 12, fontWeight: 600,
+              color: 'var(--text-dim)', letterSpacing: 1, background: 'transparent',
+            }}
+          >📋 VIEW HISTORY</button>
+        </div>
+      )}
+
+      {/* DESKTOP: left sidebar feed | MOBILE: toggle pill + bottom drawer */}
+      {!isMobile ? (
+        <div style={{
+          position: 'absolute', top: 72, left: 16, bottom: 16, width: 300, zIndex: 10,
+          background: 'var(--glass)', backdropFilter: 'var(--blur)',
+          border: '1px solid var(--glass-border)', borderRadius: 8,
+          display: 'flex', flexDirection: 'column', overflow: 'hidden',
+        }}>
+          <FeedHeader />
+          <FeedList
+            loading={loading}
+            incidents={incidents}
+            selectedId={selectedId}
+            onSelect={selectIncident}
+          />
+        </div>
+      ) : (
+        <>
+          {/* Floating toggle pill, bottom-left */}
+          {!feedOpen && (
+            <button
+              onClick={() => { setFeedOpen(true); setSelectedId(null); }}
+              style={{
+                position: 'absolute', bottom: 16, left: 16, zIndex: 15,
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '10px 14px', borderRadius: 20,
+                background: 'var(--glass)', backdropFilter: 'var(--blur)',
+                border: '1px solid var(--glass-border)',
+                fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 600, color: 'var(--text)',
+              }}
+            >
+              <span style={{
+                width: 6, height: 6, borderRadius: '50%',
+                background: active.length > 0 ? 'var(--red)' : 'var(--green)',
+              }} />
+              FEED ({incidents.length})
+            </button>
+          )}
+
+          {/* Bottom sheet drawer */}
+          {feedOpen && (
+            <div style={{
+              position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 25,
+              maxHeight: '65vh', display: 'flex', flexDirection: 'column',
+              background: 'var(--glass)', backdropFilter: 'var(--blur)',
+              borderTop: '1px solid var(--glass-border)',
+              borderRadius: '16px 16px 0 0', overflow: 'hidden',
+            }}>
+              <div style={{
+                display: 'flex', justifyContent: 'center', padding: '8px 0 4px',
+              }}>
+                <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(0,0,0,0.15)' }} />
+              </div>
+              <FeedHeader onClose={() => setFeedOpen(false)} />
+              <FeedList
+                loading={loading}
+                incidents={incidents}
+                selectedId={selectedId}
+                onSelect={selectIncident}
+              />
+            </div>
+          )}
+        </>
+      )}
+
+      {/* INCIDENT DETAIL - right panel on desktop, bottom sheet on mobile */}
+      {selected && (
+        <div style={
+          isMobile
+            ? {
+                position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 25,
+                maxHeight: '75vh', overflowY: 'auto',
+                background: 'var(--glass)', backdropFilter: 'var(--blur)',
+                borderTop: '1px solid var(--glass-border)',
+                borderRadius: '16px 16px 0 0',
+              }
+            : {
+                position: 'absolute', top: 72, right: 16, width: 320, zIndex: 10,
+                background: 'var(--glass)', backdropFilter: 'var(--blur)',
+                border: '1px solid var(--glass-border)', borderRadius: 8,
+                overflow: 'hidden',
+              }
+        }>
+          {isMobile && (
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '8px 0 4px' }}>
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: 'rgba(0,0,0,0.15)' }} />
+            </div>
+          )}
+
+          <div style={{
+            padding: '12px 14px', borderBottom: '1px solid var(--glass-border)',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            <span style={{ fontFamily: 'var(--mono)', fontSize: 10, fontWeight: 700, color: 'var(--text-dim)', letterSpacing: 2 }}>
+              INCIDENT DETAIL
+            </span>
+            <button
+              onClick={() => setSelectedId(null)}
+              style={{
+                background: 'none', border: 'none', color: 'var(--text-muted)',
+                fontFamily: 'var(--mono)', fontSize: 14, padding: '0 4px', cursor: 'pointer',
+              }}
+            >×</button>
+          </div>
+
+          <div style={{ padding: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 20 }}>
+              <div style={{
+                width: 8, height: 8, borderRadius: '50%',
+                background: selected.status === 'active' ? 'var(--red)' : 'var(--green)',
+                boxShadow: selected.status === 'active' ? '0 0 8px var(--red)' : '0 0 8px var(--green)',
+              }} />
+              <span style={{
+                fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700,
+                color: selected.status === 'active' ? 'var(--red)' : 'var(--green)',
+                letterSpacing: 2,
+              }}>
+                {selected.status === 'active' ? 'ACTIVE EMERGENCY' : 'RESOLVED'}
+              </span>
+            </div>
+
+            {[
+              ['PASSENGER', MOCK_MODE ? MOCK_USERS[selected.passenger_id] || selected.passenger_id : selected.passenger_id],
+              ['LATITUDE', selected.latitude.toFixed(6)],
+              ['LONGITUDE', selected.longitude.toFixed(6)],
+              ['TRIGGER', selected.trigger_type.toUpperCase()],
+              ['TIME', new Date(selected.created_at).toLocaleString()],
+            ].map(([label, value]) => (
+              <div key={label} style={{ marginBottom: 12 }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-muted)', letterSpacing: 1.5, marginBottom: 3 }}>
+                  {label}
+                </div>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>
+                  {value}
+                </div>
+              </div>
+            ))}
+
+            {selected.audio_url && !selected.audio_url.startsWith('mock://') && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontFamily: 'var(--mono)', fontSize: 9, color: 'var(--text-muted)', letterSpacing: 1.5, marginBottom: 6 }}>
+                  AUDIO CAPTURE
+                </div>
+                <audio controls src={selected.audio_url} style={{ width: '100%', height: 32 }} />
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 20 }}>
+              <a
+                href={`https://www.google.com/maps?q=${selected.latitude},${selected.longitude}`}
