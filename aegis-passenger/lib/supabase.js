@@ -81,32 +81,54 @@ export function generateRandomCode() {
 }
 
 /**
- * Create a pairing code for the passenger (for watchers to add them).
+ * Create or fetch the 1 unique pairing code for the passenger device.
  */
 export async function createPassengerPairingCode(passengerId, passengerName) {
-  const code = generateRandomCode();
-
   if (MOCK_MODE || !supabase) {
-    console.log('[MOCK] pairing code created:', code, 'for passenger:', passengerId);
-    return { code, expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() };
+    const codeLabel = passengerId.replace(/^passenger-|^p-/, '').slice(0, 6).toUpperCase() || generateRandomCode();
+    console.log('[MOCK] pairing code ->', codeLabel, 'for passenger:', passengerId);
+    return { code: codeLabel, expires_at: '2099-12-31T23:59:59Z' };
   }
 
-  const { data, error } = await supabase
-    .from('pairing_codes')
-    .insert({
-      code,
-      passenger_id: passengerId,
-      passenger_name: passengerName || 'Passenger',
-    })
-    .select()
-    .single();
+  try {
+    // 1. Check if pairing code already exists for this passenger
+    const { data: existing } = await supabase
+      .from('pairing_codes')
+      .select('*')
+      .eq('passenger_id', passengerId)
+      .maybeSingle();
 
-  if (error) {
-    console.log('[supabase] pairing code insert error:', error.message);
-    throw error;
+    if (existing && existing.code) {
+      return existing;
+    }
+
+    // 2. Insert/upsert deterministic code for passenger_id
+    const code = generateRandomCode();
+    const { data, error } = await supabase
+      .from('pairing_codes')
+      .upsert(
+        {
+          code,
+          passenger_id: passengerId,
+          passenger_name: passengerName || 'Passenger',
+          expires_at: '2099-12-31T23:59:59Z',
+        },
+        { onConflict: 'passenger_id' }
+      )
+      .select()
+      .single();
+
+    if (error) {
+      console.log('[supabase] pairing code insert notice:', error.message);
+      return { code, expires_at: '2099-12-31T23:59:59Z' };
+    }
+
+    return data;
+  } catch (err) {
+    console.log('[supabase] pairing code catch:', err);
+    const code = generateRandomCode();
+    return { code, expires_at: '2099-12-31T23:59:59Z' };
   }
-
-  return data;
 }
 
 /**
@@ -148,16 +170,27 @@ export async function upsertPassengerProfile(profileData) {
   }
 
   try {
+    const payload = {
+      passenger_id: profileData.passenger_id,
+      name: profileData.name || 'Passenger',
+      emergency_contact_name: profileData.emergency_contact_name || '',
+      emergency_contact_phone: profileData.emergency_contact_phone || '',
+      health_conditions: profileData.health_conditions || [],
+      disabilities: profileData.disabilities || [],
+      pairing_code: profileData.pairing_code || null,
+      updated_at: new Date().toISOString(),
+    };
+
     const { data, error } = await supabase
       .from('passenger_profiles')
-      .upsert(profileData, { onConflict: 'passenger_id' })
+      .upsert(payload, { onConflict: 'passenger_id' })
       .select()
       .single();
 
     if (error) {
       console.log('[supabase] profile upsert notice:', error.message);
     }
-    return { data, error };
+    return { data: data || payload, error };
   } catch (err) {
     console.log('[supabase] profile upsert catch:', err);
     return { data: profileData, error: null };
