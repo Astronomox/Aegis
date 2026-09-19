@@ -36,11 +36,14 @@ importers:
       expo-audio:
         specifier: '*'
         version: 57.0.4(expo-asset@57.0.16(expo@57.0.19)(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.0))(react@19.2.0)(typescript@5.9.3))(expo@57.0.19)(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.0))(react@19.2.0)
+      expo-clipboard:
+        specifier: ^57.0.2
+        version: 57.0.2(expo@57.0.19)(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.0))(react@19.2.0)
       expo-font:
         specifier: '*'
         version: 57.0.3(expo@57.0.19)(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.0))(react@19.2.0)
       expo-haptics:
-        specifier: '*'
+        specifier: ^57.0.2
         version: 57.0.2(expo@57.0.19)
       expo-location:
         specifier: '*'
@@ -1550,6 +1553,13 @@ packages:
     peerDependencies:
       expo: '*'
       expo-asset: '*'
+      react: 19.2.0
+      react-native: '*'
+
+  expo-clipboard@57.0.2:
+    resolution: {integrity: sha512-VB4Au8X/RbvJKUtJk+87vdtveWSNEa5RzY3ooeO6VNF7Rd49RbQXZOu3/TfEW9p7mU8TCfyTvjyCiAUwSoSJ4w==}
+    peerDependencies:
+      expo: '*'
       react: 19.2.0
       react-native: '*'
 
@@ -4616,6 +4626,12 @@ snapshots:
     dependencies:
       expo: 57.0.19(@babel/core@7.29.7)(@expo/dom-webview@57.0.1)(react-dom@19.2.0(react@19.2.0))(react-native-web@0.21.2(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
       expo-asset: 57.0.16(expo@57.0.19)(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
+      react: 19.2.0
+      react-native: 0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.0)
+
+  expo-clipboard@57.0.2(expo@57.0.19)(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.0))(react@19.2.0):
+    dependencies:
+      expo: 57.0.19(@babel/core@7.29.7)(@expo/dom-webview@57.0.1)(react-dom@19.2.0(react@19.2.0))(react-native-web@0.21.2(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react-native@0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.0))(react@19.2.0)(typescript@5.9.3)
       react: 19.2.0
       react-native: 0.86.3(@babel/core@7.29.7)(@types/react@19.2.18)(react@19.2.0)
 

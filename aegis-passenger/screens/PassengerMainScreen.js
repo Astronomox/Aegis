@@ -11,854 +11,1138 @@ import {
   Animated,
   Vibration,
   Platform,
+  Modal,
+  Alert,
+  Dimensions,
+  StatusBar,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
+import {
+  getEmergencyContact,
+  setEmergencyContact,
+  getEmergencyContactName,
+  setEmergencyContactName,
+  getHealthConditions,
+  setHealthConditions,
+  getDisabilities,
+  setDisabilities,
+  getPassengerName,
+  setPassengerName,
+  getPairingCode,
+  setPairingCode,
+  getPassengerId,
+  setPassengerId,
+} from '../lib/storage';
 import { getLocationFast } from '../lib/location';
-import { insertIncident, startTrip, updateTripStatus } from '../lib/supabase';
+import { insertIncident, createPassengerPairingCode } from '../lib/supabase';
 import { buildSOSMessage, openNativeSMS } from '../lib/sms';
 
-const ROUTES = [
-  { id: 'r1', name: 'Lagos ➔ Abuja (Expressway)', durationMins: 480, defaultBus: 'GIGM - Bus #1042' },
-  { id: 'r2', name: 'Lagos ➔ Benin City', durationMins: 300, defaultBus: 'Peace Mass - Bus #408' },
-  { id: 'r3', name: 'Abuja ➔ Port Harcourt', durationMins: 540, defaultBus: 'ABC Transport - Bus #202' },
-  { id: 'r4', name: 'Ibadan ➔ Kaduna', durationMins: 420, defaultBus: 'Chisco Express - Bus #889' },
-];
+const { width, height } = Dimensions.get('window');
+const HEALTH_OPTIONS = ['Asthma', 'Diabetes', 'Heart Condition', 'Epilepsy', 'Hypertension', 'Other'];
+const DISABILITY_OPTIONS = ['Hearing Impaired', 'Visually Impaired', 'Mobility Impaired', 'Speech Impaired', 'Other'];
 
-const DANGER_ZONES = [
-  {
-    id: 'dz1',
-    corridor: 'Lokoja - Abuja Highway (km 45-70)',
-    level: 'CRITICAL',
-    time: 'Recent pings: 18:00 - 22:00',
-    advice: 'Avoid night travel. Maintain active Aegis Safe Trip tracking.',
-  },
-  {
-    id: 'dz2',
-    corridor: 'Ore - Benin Expressway Bypass',
-    level: 'HIGH RISK',
-    time: 'Sparse cell towers / 2G zone',
-    advice: 'SMS-First mode enabled automatically.',
-  },
-  {
-    id: 'dz3',
-    corridor: 'Kaduna - Abuja Expressway Junction',
-    level: 'CRITICAL',
-    time: 'Security checkpoints active',
-    advice: 'Have ID ready. Keep emergency contact set.',
-  },
-];
+export default function PassengerMainScreen({ passengerId: initialPassengerId }) {
+  const [activeTab, setActiveTab] = useState('sos');
+  const [loading, setLoading] = useState(false);
+  const [profileComplete, setProfileComplete] = useState(false);
 
-export default function PassengerMainScreen({ passengerId }) {
-  const [activeTab, setActiveTab] = useState('sos'); // 'sos' | 'trip' | 'danger'
-  const [loadingSOS, setLoadingSOS] = useState(false);
+  // Profile state
+  const [passengerId, setPassengerIdState] = useState(initialPassengerId || 'passenger-' + Date.now());
+  const [passengerName, setPassengerNameState] = useState('');
+  const [emergencyContactName, setEmContactName] = useState('');
+  const [emergencyContactPhone, setEmContactPhone] = useState('');
+  const [selectedHealth, setSelectedHealth] = useState([]);
+  const [selectedDisabilities, setSelectedDisabilities] = useState([]);
+  const [pairingCode, setPairingCodeState] = useState('');
+
+  // UI state
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [showCodeModal, setShowCodeModal] = useState(false);
+  const [showPairingSuccess, setShowPairingSuccess] = useState(false);
+
+  // SOS state
+  const [sosSending, setSosSending] = useState(false);
   const [sosSuccess, setSosSuccess] = useState(false);
+  const [sosMessage, setSosMessage] = useState('');
 
-  // Safe Trip state
-  const [selectedRoute, setSelectedRoute] = useState(ROUTES[0]);
-  const [vehicleId, setVehicleId] = useState(ROUTES[0].defaultBus);
-  const [emergencyPhone, setEmergencyPhone] = useState('+234 803 123 4567');
-  const [demoFastTimer, setDemoFastTimer] = useState(false);
-
-  const [activeTrip, setActiveTrip] = useState(null);
-  const [timeLeft, setTimeLeft] = useState(0);
-  const [startingTrip, setStartingTrip] = useState(false);
-  const [checkingOut, setCheckingOut] = useState(false);
-
+  // Animations
   const pulseAnim = useRef(new Animated.Value(1)).current;
+  const slideInAnim = useRef(new Animated.Value(height)).current;
+  const fadeInAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulseAnim, { toValue: 1.05, duration: 800, useNativeDriver: true }),
-        Animated.timing(pulseAnim, { toValue: 1, duration: 800, useNativeDriver: true }),
-      ])
-    ).start();
-  }, [pulseAnim]);
+    loadProfile();
+  }, []);
 
-  useEffect(() => {
-    let timer = null;
-    if (activeTrip && activeTrip.status === 'active') {
-      timer = setInterval(() => {
-        const now = Date.now();
-        const end = new Date(activeTrip.expected_arrival).getTime();
-        const diff = Math.max(0, Math.floor((end - now) / 1000));
-        setTimeLeft(diff);
+  const startPulseAnimation = () => {
+    // Just set initial value, no animation
+    pulseAnim.setValue(1);
+  };
 
-        if (diff <= 0) {
-          handleAutoAlert();
-          clearInterval(timer);
-        }
-      }, 1000);
-    }
-    return () => {
-      if (timer) clearInterval(timer);
-    };
-  }, [activeTrip]);
 
-  const handleSOSPress = async () => {
+  const showProfileCompleteAnimation = () => {
+    slideInAnim.setValue(height);
+    Animated.timing(slideInAnim, {
+      toValue: 0,
+      duration: 400,
+      useNativeDriver: true,
+    }).start();
+  };
+
+
+  const loadProfile = async () => {
     try {
-      setLoadingSOS(true);
+      const [emContact, code] = await Promise.all([
+        getEmergencyContact(),
+        getPairingCode(),
+      ]);
+
+      if (emContact && code) {
+        setProfileComplete(true);
+      }
+
+      // Load the rest async without blocking UI
+      getPassengerName().then(name => name && setPassengerNameState(name));
+      getEmergencyContactName().then(name => name && setEmContactName(name));
+      getHealthConditions().then(health => health.length > 0 && setSelectedHealth(health));
+      getDisabilities().then(d => d.length > 0 && setSelectedDisabilities(d));
+      getPassengerId().then(id => id && setPassengerIdState(id));
+    } catch (e) {
+      console.log('[loadProfile error]', e);
+    }
+  };
+
+  const saveProfile = async () => {
+    if (!passengerName.trim()) {
+      Alert.alert('Required', 'Please enter your name');
+      return;
+    }
+    if (!emergencyContactPhone.trim()) {
+      Alert.alert('Required', 'Please enter emergency contact phone number');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      await Promise.all([
+        setPassengerName(passengerName),
+        setPassengerId(passengerId),
+        setEmergencyContactName(emergencyContactName),
+        setEmergencyContact(emergencyContactPhone),
+        setHealthConditions(selectedHealth),
+        setDisabilities(selectedDisabilities),
+      ]);
+
+      setProfileComplete(true);
+      showProfileCompleteAnimation();
+      setShowProfileModal(false);
+
+      setTimeout(() => {
+        setSosMessage('✓ Profile saved successfully!');
+        setTimeout(() => setSosMessage(''), 2000);
+      }, 500);
+    } catch (e) {
+      Alert.alert('Error', 'Failed to save profile: ' + e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const generatePairingCode = async () => {
+    if (!passengerName.trim()) {
+      Alert.alert('Required', 'Please complete your profile first');
+      setShowProfileModal(true);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const result = await createPassengerPairingCode(passengerId, passengerName);
+      if (result.code) {
+        await setPairingCode(result.code);
+        setPairingCodeState(result.code);
+        setShowPairingSuccess(true);
+        setTimeout(() => setShowPairingSuccess(false), 3000);
+      }
+    } catch (e) {
+      Alert.alert('Error', `Failed to generate pairing code: ${e.message}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyCodeToClipboard = async () => {
+    await Clipboard.setStringAsync(pairingCode);
+    Alert.alert('Copied', 'Pairing code copied to clipboard');
+  };
+
+  const handleSOS = async () => {
+    if (!emergencyContactPhone.trim()) {
+      Alert.alert('Setup Required', 'Please complete your emergency contact in Profile');
+      setActiveTab('profile');
+      return;
+    }
+
+    try {
+      setSosSending(true);
+
       if (Platform.OS !== 'web') {
-        Vibration.vibrate([0, 200, 100, 200]);
+        Vibration.vibrate([0, 300]);
       }
 
       const coords = await getLocationFast();
-
       const message = buildSOSMessage({
-        name: 'Demo Passenger',
-        route: activeTrip ? activeTrip.bus_route : selectedRoute.name,
+        name: passengerName || 'Passenger',
         lat: coords.latitude,
         lng: coords.longitude,
-        vehicleId: activeTrip ? activeTrip.vehicle_id : vehicleId,
+        health: selectedHealth,
+        disabilities: selectedDisabilities,
       });
 
       await Promise.all([
-        openNativeSMS(emergencyPhone, message),
+        openNativeSMS(emergencyContactPhone, message),
         insertIncident({
-          passenger_id: passengerId || 'demo-passenger-001',
+          passenger_id: passengerId,
           latitude: coords.latitude,
           longitude: coords.longitude,
           trigger_type: 'manual',
           status: 'active',
+          health_conditions: selectedHealth.join(','),
+          disabilities: selectedDisabilities.join(','),
         }),
       ]);
 
       setSosSuccess(true);
-      setTimeout(() => setSosSuccess(false), 5000);
+      setTimeout(() => setSosSuccess(false), 4000);
     } catch (e) {
-      console.log('[SOS error]', e);
+      Alert.alert('Error', `SOS failed: ${e.message}`);
     } finally {
-      setLoadingSOS(false);
+      setSosSending(false);
     }
   };
 
-  const handleStartTrip = async () => {
-    setStartingTrip(true);
-    const coords = await getLocationFast();
+  const ProfileCheckItem = ({ label, value, complete }) => (
+    <View style={styles.checkItem}>
+      <View style={[styles.checkBox, passengerName && styles.checkBoxDone]}>
+        {passengerName && <Text style={styles.checkmark}>✓</Text>}
+      </View>
+      <View style={styles.checkContent}>
+        <Text style={styles.checkLabel}>Name</Text>
+        {passengerName && <Text style={styles.checkValue}>{passengerName}</Text>}
+      </View>
+    </View>
+  );
 
-    const durationSeconds = demoFastTimer ? 30 : selectedRoute.durationMins * 60;
-    const now = new Date();
-    const expectedArrival = new Date(now.getTime() + durationSeconds * 1000);
-
-    const tripData = {
-      passenger_id: passengerId || 'demo-passenger-001',
-      passenger_name: 'Demo Passenger',
-      bus_route: selectedRoute.name,
-      vehicle_id: vehicleId,
-      departure_location: selectedRoute.name.split('➔')[0].trim(),
-      arrival_location: selectedRoute.name.split('➔')[1].trim(),
-      departure_time: now.toISOString(),
-      expected_arrival: expectedArrival.toISOString(),
-      status: 'active',
-      latitude: coords.latitude,
-      longitude: coords.longitude,
-      emergency_contact: emergencyPhone,
-    };
-
-    const res = await startTrip(tripData);
-    setActiveTrip(res.data || tripData);
-    setTimeLeft(durationSeconds);
-    setStartingTrip(false);
-  };
-
-  const handleCheckOut = async () => {
-    if (!activeTrip) return;
-    setCheckingOut(true);
-    await updateTripStatus(activeTrip.id, 'completed', {
-      actual_arrival: new Date().toISOString(),
-    });
-    setActiveTrip(null);
-    setCheckingOut(false);
-  };
-
-  const handleAutoAlert = async () => {
-    if (!activeTrip || activeTrip.status === 'alert') return;
-    await updateTripStatus(activeTrip.id, 'alert');
-    setActiveTrip((prev) => (prev ? { ...prev, status: 'alert' } : null));
-
-    const coords = await getLocationFast();
-    const message = `AUTO-ALERT: Passenger did not check out! Bus: ${activeTrip.bus_route} (${activeTrip.vehicle_id}). Location: https://maps.google.com/?q=${coords.latitude},${coords.longitude}`;
-    openNativeSMS(emergencyPhone, message);
-  };
-
-  const formatTimeLeft = (sec) => {
-    const mins = Math.floor(sec / 60);
-    const secs = sec % 60;
-    const hrs = Math.floor(mins / 60);
-    const remainMins = mins % 60;
-    if (hrs > 0) {
-      return `${hrs}h ${remainMins}m ${secs < 10 ? '0' : ''}${secs}s`;
-    }
-    return `${mins}m ${secs < 10 ? '0' : ''}${secs}s`;
-  };
-
-  return (
-    <SafeAreaView style={styles.container}>
-      {/* HEADER */}
-      <View style={styles.header}>
-        <View style={styles.headerTitleRow}>
-          <Text style={styles.headerBadge}>NIGERIA INTERSTATE</Text>
-          <Text style={styles.headerTitle}>AEGIS</Text>
-        </View>
-        <View style={styles.statusPill}>
-          <View style={styles.statusDot} />
-          <Text style={styles.statusText}>SMS-First Active</Text>
-        </View>
+  const renderSOSTab = () => (
+    <View style={styles.tabContent}>
+      <View style={styles.sosHeader}>
+        <Text style={styles.sosTitle}>EMERGENCY SOS</Text>
+        <Text style={styles.sosSubtitle}>
+          One tap sends SMS + alerts emergency contact
+        </Text>
       </View>
 
-      {/* TABS */}
-      <View style={styles.tabBar}>
+      {!profileComplete && (
+        <View style={styles.warningBox}>
+          <Text style={styles.warningText}>⚠️ Complete your profile first</Text>
+          <TouchableOpacity
+            style={styles.warningButton}
+            onPress={() => setShowProfileModal(true)}
+          >
+            <Text style={styles.warningButtonText}>Setup Now</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      <Animated.View style={{ transform: [{ scale: pulseAnim }], marginVertical: 40 }}>
         <TouchableOpacity
-          style={[styles.tab, activeTab === 'sos' && styles.tabActiveSOS]}
-          onPress={() => setActiveTab('sos')}
+          style={[styles.sosButton, sosSending && styles.sosButtonDisabled]}
+          onPress={handleSOS}
+          disabled={sosSending || !profileComplete}
+          activeOpacity={0.8}
         >
-          <Text style={[styles.tabText, activeTab === 'sos' && styles.tabTextActive]}>
-            🚨 SOS
-          </Text>
+          {sosSending ? (
+            <>
+              <ActivityIndicator size={60} color="#fff" />
+              <Text style={styles.sosSendingText}>SENDING...</Text>
+            </>
+          ) : (
+            <>
+              <Text style={styles.sosButtonText}>SOS</Text>
+              <Text style={styles.sosButtonSubtext}>TAP FOR HELP</Text>
+            </>
+          )}
         </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'trip' && styles.tabActiveTrip]}
-          onPress={() => setActiveTab('trip')}
-        >
-          <Text style={[styles.tabText, activeTab === 'trip' && styles.tabTextActive]}>
-            🚌 SAFE TRIP
+      </Animated.View>
+
+      {sosSuccess && (
+        <Animated.View style={[styles.sosSuccessBox, { opacity: fadeInAnim }]}>
+          <Text style={styles.sosSuccessTitle}>✓ ALERT SENT</Text>
+          <Text style={styles.sosSuccessText}>
+            SMS sent to {emergencyContactName || 'emergency contact'}
           </Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.tab, activeTab === 'danger' && styles.tabActiveDanger]}
-          onPress={() => setActiveTab('danger')}
-        >
-          <Text style={[styles.tabText, activeTab === 'danger' && styles.tabTextActive]}>
-            ⚠️ DANGER ZONES
+          <Text style={styles.sosSuccessDetail}>
+            Watcher dashboard has been notified
           </Text>
-        </TouchableOpacity>
+        </Animated.View>
+      )}
+
+      <View style={styles.sosInfoCard}>
+        <Text style={styles.sosInfoTitle}>What happens when you tap SOS:</Text>
+        <View style={styles.sosInfoItem}>
+          <Text style={styles.sosInfoIcon}>📍</Text>
+          <Text style={styles.sosInfoText}>Your GPS location is shared</Text>
+        </View>
+        <View style={styles.sosInfoItem}>
+          <Text style={styles.sosInfoIcon}>🗺️</Text>
+          <Text style={styles.sosInfoText}>Google Maps link included</Text>
+        </View>
+        <View style={styles.sosInfoItem}>
+          <Text style={styles.sosInfoIcon}>🩺</Text>
+          <Text style={styles.sosInfoText}>Health & disability info sent</Text>
+        </View>
+        <View style={styles.sosInfoItem}>
+          <Text style={styles.sosInfoIcon}>📱</Text>
+          <Text style={styles.sosInfoText}>SMS works on 2G/3G/4G</Text>
+        </View>
+      </View>
+    </View>
+  );
+
+  const renderProfileTab = () => (
+    <View style={styles.tabContent}>
+      <View style={styles.profileHeader}>
+        <Text style={styles.profileTitle}>Your Safety Profile</Text>
+        <Text style={styles.profileSubtitle}>
+          First responders will see this information
+        </Text>
       </View>
 
-      <ScrollView style={styles.content} contentContainerStyle={styles.contentContainer}>
-        {activeTab === 'sos' ? (
-          /* SOS TAB */
-          <View style={styles.sosContainer}>
-            <Text style={styles.sosHeadline}>One-Tap Distress Signal</Text>
-            <Text style={styles.sosSubhead}>
-              Instant native SMS with your GPS coordinates & Google Maps link to your emergency contact. No data required.
+      <View style={styles.profileCard}>
+        <Text style={styles.profileSectionTitle}>Profile Status</Text>
+        <ProfileCheckItem
+          label="Name"
+          value={passengerName}
+          complete={!!passengerName}
+        />
+        <ProfileCheckItem
+          label="Emergency Contact"
+          value={emergencyContactName || emergencyContactPhone}
+          complete={!!emergencyContactPhone}
+        />
+        <ProfileCheckItem
+          label="Health Information"
+          value={selectedHealth.length > 0 ? selectedHealth.join(', ') : 'None'}
+          complete={selectedHealth.length > 0}
+        />
+
+        {!profileComplete && (
+          <TouchableOpacity
+            style={styles.completeButton}
+            onPress={() => setShowProfileModal(true)}
+          >
+            <Text style={styles.completeButtonText}>Complete Profile Now</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+
+      {profileComplete && (
+        <>
+          <View style={styles.pairingSection}>
+            <Text style={styles.profileSectionTitle}>Pair with Watcher</Text>
+            <Text style={styles.pairingDescription}>
+              Share this code with someone you trust to watch over your trips
             </Text>
 
-            <View style={styles.sosButtonWrapper}>
-              <Animated.View style={{ transform: [{ scale: pulseAnim }] }}>
-                <TouchableOpacity
-                  style={[styles.sosButton, loadingSOS && styles.sosButtonDisabled]}
-                  onPress={handleSOSPress}
-                  disabled={loadingSOS}
-                  activeOpacity={0.8}
-                >
-                  {loadingSOS ? (
-                    <ActivityIndicator size="large" color="#fff" />
-                  ) : (
-                    <>
-                      <Text style={styles.sosButtonText}>SOS</Text>
-                      <Text style={styles.sosButtonSub}>TAP FOR HELP</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </Animated.View>
-            </View>
-
-            {sosSuccess && (
-              <View style={styles.alertSuccessBox}>
-                <Text style={styles.alertSuccessTitle}>✓ SOS Alert Dispatched!</Text>
-                <Text style={styles.alertSuccessSub}>SMS app launched & backend command center notified.</Text>
-              </View>
-            )}
-
-            <View style={styles.infoCard}>
-              <Text style={styles.infoCardTitle}>Emergency Contact</Text>
-              <TextInput
-                style={styles.input}
-                value={emergencyPhone}
-                onChangeText={setEmergencyPhone}
-                placeholder="Emergency Phone Number"
-                keyboardType="phone-pad"
-              />
-              <Text style={styles.infoNote}>
-                * Works over GSM SMS (2G/3G/4G). Operates reliably in remote highway zones.
-              </Text>
-            </View>
-          </View>
-        ) : activeTab === 'trip' ? (
-          /* SAFE TRIP TAB */
-          <View style={styles.tripContainer}>
-            {activeTrip ? (
-              <View style={styles.activeTripCard}>
-                <View style={styles.activeTripHeader}>
-                  <View style={[styles.badge, activeTrip.status === 'alert' ? styles.badgeRed : styles.badgeGreen]}>
-                    <Text style={styles.badgeText}>
-                      {activeTrip.status === 'alert' ? 'ALERT: MISSED CHECKOUT' : 'TRIP IN PROGRESS'}
-                    </Text>
-                  </View>
-                  <Text style={styles.activeTripRoute}>{activeTrip.bus_route}</Text>
-                  <Text style={styles.activeTripBus}>{activeTrip.vehicle_id}</Text>
+            {pairingCode ? (
+              <View style={styles.pairingCodeBox}>
+                <View style={styles.codeDisplay}>
+                  <Text style={styles.codeText}>{pairingCode}</Text>
                 </View>
-
-                <View style={styles.timerSection}>
-                  <Text style={styles.timerLabel}>ETA COUNTDOWN</Text>
-                  <Text style={[styles.timerValue, activeTrip.status === 'alert' && styles.timerValueAlert]}>
-                    {formatTimeLeft(timeLeft)}
-                  </Text>
-                  <Text style={styles.timerNote}>
-                    {activeTrip.status === 'alert'
-                      ? 'Auto-alert triggered to emergency contact!'
-                      : 'Tap check-out when you arrive safely.'}
-                  </Text>
-                </View>
-
                 <TouchableOpacity
-                  style={styles.checkOutButton}
-                  onPress={handleCheckOut}
-                  disabled={checkingOut}
+                  style={styles.copyCodeButton}
+                  onPress={copyCodeToClipboard}
                 >
-                  {checkingOut ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text style={styles.checkOutButtonText}>✓ Arrived Safely (Check Out)</Text>
-                  )}
-                </TouchableOpacity>
-
-                <TouchableOpacity
-                  style={styles.sosEmergencyLink}
-                  onPress={handleSOSPress}
-                >
-                  <Text style={styles.sosEmergencyLinkText}>🚨 Trigger SOS Emergency Alert Now</Text>
+                  <Text style={styles.copyButtonText}>📋 Copy Code</Text>
                 </TouchableOpacity>
               </View>
             ) : (
-              <View style={styles.startTripForm}>
-                <Text style={styles.formTitle}>Safe Trip Check-in</Text>
-                <Text style={styles.formSub}>
-                  Set up arrival tracking before your interstate journey. If you don't check out on arrival, Aegis auto-alerts your contact.
+              <TouchableOpacity
+                style={[styles.primaryButton, loading && styles.buttonDisabled]}
+                onPress={generatePairingCode}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text style={styles.primaryButtonText}>Generate Pairing Code</Text>
+                )}
+              </TouchableOpacity>
+            )}
+
+            {showPairingSuccess && (
+              <View style={styles.successNotification}>
+                <Text style={styles.successNotificationText}>
+                  ✓ Pairing code generated!
                 </Text>
-
-                <Text style={styles.label}>Select Route</Text>
-                {ROUTES.map((route) => (
-                  <TouchableOpacity
-                    key={route.id}
-                    style={[styles.routeOption, selectedRoute.id === route.id && styles.routeOptionSelected]}
-                    onPress={() => {
-                      setSelectedRoute(route);
-                      setVehicleId(route.defaultBus);
-                    }}
-                  >
-                    <Text style={[styles.routeOptionText, selectedRoute.id === route.id && styles.routeOptionTextSelected]}>
-                      {route.name}
-                    </Text>
-                    <Text style={styles.routeOptionSub}>{Math.round(route.durationMins / 60)} hrs expected</Text>
-                  </TouchableOpacity>
-                ))}
-
-                <Text style={[styles.label, { marginTop: 16 }]}>Vehicle / Bus ID</Text>
-                <TextInput
-                  style={styles.input}
-                  value={vehicleId}
-                  onChangeText={setVehicleId}
-                  placeholder="e.g. GIGM - Bus #1042"
-                />
-
-                <View style={styles.switchRow}>
-                  <Text style={styles.switchLabel}>Demo Fast Timer (30s countdown)</Text>
-                  <TouchableOpacity
-                    style={[styles.toggleBtn, demoFastTimer && styles.toggleBtnActive]}
-                    onPress={() => setDemoFastTimer(!demoFastTimer)}
-                  >
-                    <Text style={styles.toggleBtnText}>{demoFastTimer ? 'ON (30s)' : 'OFF (Prod)'}</Text>
-                  </TouchableOpacity>
-                </View>
-
-                <TouchableOpacity
-                  style={styles.startTripButton}
-                  onPress={handleStartTrip}
-                  disabled={startingTrip}
-                >
-                  {startingTrip ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text style={styles.startTripButtonText}>🚌 Start Safe Trip Tracking</Text>
-                  )}
-                </TouchableOpacity>
               </View>
             )}
           </View>
-        ) : (
-          /* DANGER ZONES TAB */
-          <View style={styles.dangerContainer}>
-            <Text style={styles.formTitle}>Highway Threat Advisories</Text>
-            <Text style={styles.formSub}>
-              Live community & security pings along major Nigerian interstate corridors.
-            </Text>
 
-            {DANGER_ZONES.map((zone) => (
-              <View key={zone.id} style={styles.dangerCard}>
-                <View style={styles.dangerCardHeader}>
-                  <Text style={styles.dangerTitle}>{zone.corridor}</Text>
-                  <View style={[styles.dangerBadge, zone.level === 'CRITICAL' ? styles.badgeRed : styles.badgeOrange]}>
-                    <Text style={styles.dangerBadgeText}>{zone.level}</Text>
-                  </View>
-                </View>
-                <Text style={styles.dangerTime}>{zone.time}</Text>
-                <Text style={styles.dangerAdvice}>💡 Advisory: {zone.advice}</Text>
-              </View>
-            ))}
+          <TouchableOpacity
+            style={styles.editProfileButton}
+            onPress={() => setShowProfileModal(true)}
+          >
+            <Text style={styles.editProfileButtonText}>✎ Edit Profile</Text>
+          </TouchableOpacity>
+        </>
+      )}
+    </View>
+  );
+
+  return (
+    <>
+      <StatusBar barStyle="light-content" backgroundColor="#0F172A" />
+      <SafeAreaView style={styles.container}>
+        {/* HEADER */}
+        <View style={styles.header}>
+          <View>
+            <Text style={styles.headerLogo}>AEGIS</Text>
+            <Text style={styles.headerTagline}>Travel Safety Network</Text>
           </View>
-        )}
-      </ScrollView>
-
-      {/* FREE TIER AD SPONSORED BANNER */}
-      <View style={styles.adBanner}>
-        <View style={styles.adBadge}>
-          <Text style={styles.adBadgeText}>SPONSORED</Text>
+          <View style={styles.headerStatus}>
+            <View style={[styles.statusDot, profileComplete && styles.statusDotActive]} />
+            <Text style={styles.statusText}>
+              {profileComplete ? 'Active' : 'Setup'}
+            </Text>
+          </View>
         </View>
-        <Text style={styles.adText} numberOfLines={1}>
-          🛡️ AXA Mansard Interstate Trip Insurance — Get ₦1M coverage for ₦200/trip
-        </Text>
-      </View>
-    </SafeAreaView>
+
+        {/* TAB NAVIGATION */}
+        <View style={styles.tabNav}>
+          {[
+            { id: 'sos', icon: '🚨', label: 'SOS' },
+            { id: 'profile', icon: '👤', label: 'Profile' },
+          ].map((tab) => (
+            <TouchableOpacity
+              key={tab.id}
+              style={[styles.navTab, activeTab === tab.id && styles.navTabActive]}
+              onPress={() => setActiveTab(tab.id)}
+            >
+              <Text style={styles.navTabIcon}>{tab.icon}</Text>
+              <Text style={[styles.navTabLabel, activeTab === tab.id && styles.navTabLabelActive]}>
+                {tab.label}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* CONTENT */}
+        <ScrollView
+          style={styles.scrollContent}
+          contentContainerStyle={styles.scrollPad}
+          showsVerticalScrollIndicator={false}
+        >
+          {activeTab === 'sos' && renderSOSTab()}
+          {activeTab === 'profile' && renderProfileTab()}
+        </ScrollView>
+      </SafeAreaView>
+
+      {/* PROFILE MODAL */}
+      <Modal visible={showProfileModal} animationType="slide" transparent={false}>
+        <SafeAreaView style={styles.modalContainer}>
+          <StatusBar barStyle="light-content" backgroundColor="#0F172A" />
+
+          {/* Modal Header */}
+          <View style={styles.modalHeader}>
+            <TouchableOpacity onPress={() => setShowProfileModal(false)}>
+              <Text style={styles.modalCloseButton}>✕</Text>
+            </TouchableOpacity>
+            <Text style={styles.modalTitle}>Edit Profile</Text>
+            <View style={{ width: 30 }} />
+          </View>
+
+          <ScrollView
+            style={styles.modalContent}
+            contentContainerStyle={styles.modalPad}
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Name */}
+            <View style={styles.formSection}>
+              <Text style={styles.formLabel}>Your Name</Text>
+              <TextInput
+                style={styles.formInput}
+                value={passengerName}
+                onChangeText={setPassengerNameState}
+                placeholder="Enter your full name"
+                placeholderTextColor="#64748B"
+              />
+            </View>
+
+            {/* Emergency Contact Name */}
+            <View style={styles.formSection}>
+              <Text style={styles.formLabel}>Emergency Contact Name</Text>
+              <TextInput
+                style={styles.formInput}
+                value={emergencyContactName}
+                onChangeText={setEmContactName}
+                placeholder="e.g., Mum, Best Friend"
+                placeholderTextColor="#64748B"
+              />
+            </View>
+
+            {/* Emergency Contact Phone */}
+            <View style={styles.formSection}>
+              <Text style={styles.formLabel}>Emergency Contact Phone *</Text>
+              <TextInput
+                style={styles.formInput}
+                value={emergencyContactPhone}
+                onChangeText={setEmContactPhone}
+                placeholder="+234 803 123 4567"
+                keyboardType="phone-pad"
+                placeholderTextColor="#64748B"
+              />
+              <Text style={styles.formHelper}>This is who gets the SOS alert</Text>
+            </View>
+
+            {/* Health Conditions */}
+            <View style={styles.formSection}>
+              <Text style={styles.formLabel}>Health Conditions</Text>
+              <Text style={styles.formHelper}>Select any that apply</Text>
+              <View style={styles.optionsGrid}>
+                {HEALTH_OPTIONS.map((option) => (
+                  <TouchableOpacity
+                    key={option}
+                    style={[
+                      styles.optionChip,
+                      selectedHealth.includes(option) && styles.optionChipActive,
+                    ]}
+                    onPress={() => {
+                      setSelectedHealth((prev) =>
+                        prev.includes(option)
+                          ? prev.filter((x) => x !== option)
+                          : [...prev, option]
+                      );
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.optionChipText,
+                        selectedHealth.includes(option) && styles.optionChipTextActive,
+                      ]}
+                    >
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Disabilities */}
+            <View style={styles.formSection}>
+              <Text style={styles.formLabel}>Accessibility Needs</Text>
+              <Text style={styles.formHelper}>Select any that apply</Text>
+              <View style={styles.optionsGrid}>
+                {DISABILITY_OPTIONS.map((option) => (
+                  <TouchableOpacity
+                    key={option}
+                    style={[
+                      styles.optionChip,
+                      selectedDisabilities.includes(option) && styles.optionChipActive,
+                    ]}
+                    onPress={() => {
+                      setSelectedDisabilities((prev) =>
+                        prev.includes(option)
+                          ? prev.filter((x) => x !== option)
+                          : [...prev, option]
+                      );
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.optionChipText,
+                        selectedDisabilities.includes(option) && styles.optionChipTextActive,
+                      ]}
+                    >
+                      {option}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+
+            {/* Save Button */}
+            <TouchableOpacity
+              style={[styles.primaryButton, styles.savButton, loading && styles.buttonDisabled]}
+              onPress={saveProfile}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.primaryButtonText}>💾 Save Profile</Text>
+              )}
+            </TouchableOpacity>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* PAIRING SUCCESS NOTIFICATION */}
+      {showPairingSuccess && (
+        <View style={styles.notificationOverlay}>
+          <View style={styles.notificationCard}>
+            <Text style={styles.notificationIcon}>✓</Text>
+            <Text style={styles.notificationTitle}>Pairing Code Generated!</Text>
+            <Text style={styles.notificationText}>Share the code with watchers</Text>
+          </View>
+        </View>
+      )}
+    </>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#0F172A',
+    backgroundColor: '#312C51',
   },
   header: {
     paddingHorizontal: 20,
-    paddingTop: 16,
-    paddingBottom: 12,
+    paddingVertical: 16,
+    backgroundColor: '#48426D',
+    borderBottomWidth: 1,
+    borderBottomColor: '#5A5380',
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: '#1E293B',
   },
-  headerTitleRow: {
-    flexDirection: 'column',
-  },
-  headerBadge: {
-    color: '#38BDF8',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1.5,
-  },
-  headerTitle: {
-    color: '#FFFFFF',
-    fontSize: 22,
+  headerLogo: {
+    fontSize: 32,
     fontWeight: '900',
-    letterSpacing: 1,
+    color: '#F0C3BE',
+    letterSpacing: 3,
   },
-  statusPill: {
+  headerTagline: {
+    fontSize: 11,
+    color: '#D4C5BE',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+  headerStatus: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(34, 197, 94, 0.15)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(34, 197, 94, 0.3)',
-  },
-  statusDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#22C55E',
-    marginRight: 6,
-  },
-  statusText: {
-    color: '#4ADE80',
-    fontSize: 11,
-    fontWeight: '600',
-  },
-  tabBar: {
-    flexDirection: 'row',
-    paddingHorizontal: 16,
-    paddingTop: 12,
     gap: 6,
   },
-  tab: {
-    flex: 1,
-    paddingVertical: 10,
-    alignItems: 'center',
-    borderRadius: 12,
-    backgroundColor: '#1E293B',
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#9A8FA3',
   },
-  tabActiveSOS: {
-    backgroundColor: '#EF4444',
+  statusDotActive: {
+    backgroundColor: '#F1AA9B',
   },
-  tabActiveTrip: {
-    backgroundColor: '#2563EB',
-  },
-  tabActiveDanger: {
-    backgroundColor: '#EA580C',
-  },
-  tabText: {
-    color: '#94A3B8',
+  statusText: {
     fontSize: 11,
-    fontWeight: '700',
+    color: '#D4C5BE',
+    fontWeight: '600',
   },
-  tabTextActive: {
-    color: '#FFFFFF',
+
+  tabNav: {
+    flexDirection: 'row',
+    backgroundColor: '#48426D',
+    borderBottomWidth: 1,
+    borderBottomColor: '#5A5380',
+    paddingHorizontal: 12,
   },
-  content: {
+  navTab: {
     flex: 1,
-  },
-  contentContainer: {
-    padding: 20,
-    paddingBottom: 60,
-  },
-  sosContainer: {
-    alignItems: 'center',
-  },
-  sosHeadline: {
-    color: '#FFFFFF',
-    fontSize: 20,
-    fontWeight: '800',
-    marginTop: 8,
-  },
-  sosSubhead: {
-    color: '#94A3B8',
-    fontSize: 13,
-    textAlign: 'center',
-    marginTop: 6,
-    lineHeight: 18,
-  },
-  sosButtonWrapper: {
-    marginVertical: 28,
-    alignItems: 'center',
-  },
-  sosButton: {
-    width: 170,
-    height: 170,
-    borderRadius: 85,
-    backgroundColor: '#DC2626',
+    paddingVertical: 14,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#EF4444',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.6,
-    shadowRadius: 20,
-    elevation: 12,
-    borderWidth: 6,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderBottomWidth: 3,
+    borderBottomColor: 'transparent',
   },
-  sosButtonDisabled: {
-    opacity: 0.7,
+  navTabActive: {
+    borderBottomColor: '#F0C3BE',
   },
-  sosButtonText: {
-    color: '#FFFFFF',
-    fontSize: 44,
+  navTabIcon: {
+    fontSize: 20,
+    marginBottom: 4,
+  },
+  navTabLabel: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#9A8FA3',
+    letterSpacing: 0.5,
+  },
+  navTabLabelActive: {
+    color: '#F0C3BE',
+  },
+
+  scrollContent: {
+    flex: 1,
+  },
+  scrollPad: {
+    paddingBottom: 40,
+  },
+
+  tabContent: {
+    paddingHorizontal: 16,
+    paddingTop: 20,
+  },
+
+  // SOS Tab
+  sosHeader: {
+    marginBottom: 24,
+  },
+  sosTitle: {
+    fontSize: 28,
     fontWeight: '900',
-    letterSpacing: 2,
-  },
-  sosButtonSub: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 10,
-    fontWeight: '800',
+    color: '#FFFFFF',
     letterSpacing: 1,
-    marginTop: 2,
+    marginBottom: 6,
   },
-  alertSuccessBox: {
-    width: '100%',
-    backgroundColor: 'rgba(34, 197, 94, 0.15)',
-    borderColor: '#22C55E',
-    borderWidth: 1,
+  sosSubtitle: {
+    fontSize: 13,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+
+  warningBox: {
+    backgroundColor: 'rgba(241, 170, 155, 0.15)',
+    borderColor: '#F1AA9B',
+    borderWidth: 1.5,
     borderRadius: 12,
     padding: 14,
     marginBottom: 20,
-    alignItems: 'center',
-  },
-  alertSuccessTitle: {
-    color: '#4ADE80',
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  alertSuccessSub: {
-    color: '#94A3B8',
-    fontSize: 12,
-    marginTop: 2,
-  },
-  infoCard: {
-    width: '100%',
-    backgroundColor: '#1E293B',
-    borderRadius: 16,
-    padding: 16,
-  },
-  infoCardTitle: {
-    color: '#F8FAFC',
-    fontSize: 14,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: '#0F172A',
-    borderColor: '#334155',
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    color: '#FFFFFF',
-    fontSize: 14,
-  },
-  infoNote: {
-    color: '#64748B',
-    fontSize: 11,
-    marginTop: 10,
-    lineHeight: 15,
-  },
-  tripContainer: {
-    width: '100%',
-  },
-  startTripForm: {
-    backgroundColor: '#1E293B',
-    borderRadius: 16,
-    padding: 18,
-  },
-  formTitle: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  formSub: {
-    color: '#94A3B8',
-    fontSize: 12,
-    marginTop: 4,
-    marginBottom: 16,
-    lineHeight: 17,
-  },
-  label: {
-    color: '#CBD5E1',
-    fontSize: 12,
-    fontWeight: '700',
-    marginBottom: 8,
-  },
-  routeOption: {
-    backgroundColor: '#0F172A',
-    borderColor: '#334155',
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-  },
-  routeOptionSelected: {
-    borderColor: '#38BDF8',
-    backgroundColor: 'rgba(56, 189, 248, 0.1)',
-  },
-  routeOptionText: {
-    color: '#E2E8F0',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  routeOptionTextSelected: {
-    color: '#38BDF8',
-  },
-  routeOptionSub: {
-    color: '#64748B',
-    fontSize: 11,
-    marginTop: 2,
-  },
-  switchRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginVertical: 16,
+    justifyContent: 'space-between',
   },
-  switchLabel: {
-    color: '#CBD5E1',
-    fontSize: 12,
+  warningText: {
+    color: '#F1AA9B',
+    fontSize: 13,
+    fontWeight: '600',
   },
-  toggleBtn: {
-    backgroundColor: '#334155',
+  warningButton: {
+    backgroundColor: '#F1AA9B',
     paddingHorizontal: 12,
     paddingVertical: 6,
-    borderRadius: 12,
+    borderRadius: 6,
   },
-  toggleBtnActive: {
-    backgroundColor: '#EA580C',
-  },
-  toggleBtnText: {
-    color: '#FFFFFF',
+  warningButtonText: {
+    color: '#312C51',
     fontSize: 11,
     fontWeight: '700',
   },
-  startTripButton: {
-    backgroundColor: '#2563EB',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  startTripButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '800',
-  },
-  activeTripCard: {
-    backgroundColor: '#1E293B',
-    borderRadius: 16,
-    padding: 20,
-    alignItems: 'center',
-  },
-  activeTripHeader: {
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-    marginBottom: 8,
-  },
-  badgeGreen: {
-    backgroundColor: 'rgba(34, 197, 94, 0.2)',
-  },
-  badgeRed: {
-    backgroundColor: 'rgba(239, 68, 68, 0.2)',
-  },
-  badgeOrange: {
-    backgroundColor: 'rgba(234, 88, 12, 0.2)',
-  },
-  badgeText: {
-    color: '#4ADE80',
-    fontSize: 10,
-    fontWeight: '800',
-    letterSpacing: 1,
-  },
-  activeTripRoute: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '800',
-  },
-  activeTripBus: {
-    color: '#94A3B8',
-    fontSize: 13,
-    marginTop: 2,
-  },
-  timerSection: {
-    alignItems: 'center',
-    backgroundColor: '#0F172A',
+
+  sosButton: {
     width: '100%',
-    padding: 16,
-    borderRadius: 14,
-    marginBottom: 20,
+    paddingVertical: 70,
+    backgroundColor: '#F1AA9B',
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#F1AA9B',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.4,
+    shadowRadius: 16,
+    elevation: 12,
   },
-  timerLabel: {
-    color: '#64748B',
-    fontSize: 10,
-    fontWeight: '800',
+  sosButtonDisabled: {
+    opacity: 0.6,
+  },
+  sosButtonText: {
+    fontSize: 56,
+    fontWeight: '900',
+    color: '#312C51',
+    letterSpacing: 2,
+  },
+  sosButtonSubtext: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#312C51',
+    marginTop: 8,
     letterSpacing: 1.5,
   },
-  timerValue: {
-    color: '#38BDF8',
-    fontSize: 32,
+  sosSendingText: {
+    fontSize: 12,
+    color: '#312C51',
+    marginTop: 8,
+    fontWeight: '600',
+  },
+
+  sosSuccessBox: {
+    backgroundColor: 'rgba(240, 195, 190, 0.15)',
+    borderColor: '#F0C3BE',
+    borderWidth: 1.5,
+    borderRadius: 14,
+    padding: 18,
+    marginTop: 20,
+    marginBottom: 20,
+  },
+  sosSuccessTitle: {
+    fontSize: 16,
     fontWeight: '900',
-    marginVertical: 4,
-    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    color: '#F0C3BE',
+    marginBottom: 6,
+    letterSpacing: 1,
   },
-  timerValueAlert: {
-    color: '#EF4444',
+  sosSuccessText: {
+    fontSize: 13,
+    color: '#F0C3BE',
+    fontWeight: '600',
+    marginBottom: 4,
   },
-  timerNote: {
-    color: '#94A3B8',
+  sosSuccessDetail: {
     fontSize: 11,
-    textAlign: 'center',
+    color: '#D4C5BE',
+    fontWeight: '500',
   },
-  checkOutButton: {
-    backgroundColor: '#16A34A',
-    width: '100%',
-    paddingVertical: 14,
+
+  sosInfoCard: {
+    backgroundColor: '#48426D',
+    borderRadius: 14,
+    padding: 18,
+    marginTop: 20,
+    borderWidth: 1,
+    borderColor: '#5A5380',
+  },
+  sosInfoTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#D4C5BE',
+    marginBottom: 14,
+    letterSpacing: 0.3,
+  },
+  sosInfoItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 12,
+    gap: 12,
+  },
+  sosInfoIcon: {
+    fontSize: 18,
+    width: 24,
+  },
+  sosInfoText: {
+    fontSize: 12,
+    color: '#D4C5BE',
+    fontWeight: '500',
+    flex: 1,
+    lineHeight: 18,
+  },
+
+  // Profile Tab
+  profileHeader: {
+    marginBottom: 20,
+  },
+  profileTitle: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+    marginBottom: 6,
+  },
+  profileSubtitle: {
+    fontSize: 13,
+    color: '#94A3B8',
+    fontWeight: '500',
+  },
+
+  profileCard: {
+    backgroundColor: '#48426D',
+    borderRadius: 14,
+    padding: 18,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#5A5380',
+  },
+  profileSectionTitle: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#F0C3BE',
+    marginBottom: 14,
+    letterSpacing: 0.5,
+  },
+
+  checkItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#5A5380',
+    gap: 12,
+  },
+  checkBox: {
+    width: 24,
+    height: 24,
+    borderRadius: 6,
+    borderWidth: 2,
+    borderColor: '#5A5380',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkBoxDone: {
+    backgroundColor: '#F0C3BE',
+    borderColor: '#F0C3BE',
+  },
+  checkmark: {
+    color: '#312C51',
+    fontWeight: '900',
+    fontSize: 14,
+  },
+  checkContent: {
+    flex: 1,
+  },
+  checkLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#D4C5BE',
+  },
+  checkValue: {
+    fontSize: 11,
+    color: '#9A8FA3',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+
+  completeButton: {
+    backgroundColor: '#F0C3BE',
+    borderRadius: 10,
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 14,
+  },
+  completeButtonText: {
+    color: '#312C51',
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+
+  pairingSection: {
+    backgroundColor: '#48426D',
+    borderRadius: 14,
+    padding: 18,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#5A5380',
+  },
+  pairingDescription: {
+    fontSize: 12,
+    color: '#9A8FA3',
+    marginBottom: 14,
+    fontWeight: '500',
+  },
+
+  pairingCodeBox: {
+    backgroundColor: '#312C51',
     borderRadius: 12,
+    padding: 16,
+    borderWidth: 2,
+    borderColor: '#F0C3BE',
+    marginBottom: 14,
+  },
+  codeDisplay: {
     alignItems: 'center',
     marginBottom: 12,
   },
-  checkOutButtonText: {
-    color: '#FFFFFF',
-    fontSize: 14,
-    fontWeight: '800',
+  codeText: {
+    fontSize: 28,
+    fontWeight: '900',
+    color: '#F0C3BE',
+    letterSpacing: 6,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
   },
-  sosEmergencyLink: {
-    paddingVertical: 8,
-  },
-  sosEmergencyLinkText: {
-    color: '#EF4444',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  dangerContainer: {
-    width: '100%',
-  },
-  dangerCard: {
-    backgroundColor: '#1E293B',
-    borderColor: 'rgba(239, 68, 68, 0.3)',
-    borderWidth: 1,
-    borderRadius: 14,
-    padding: 14,
-    marginBottom: 10,
-  },
-  dangerCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  copyCodeButton: {
+    backgroundColor: '#F0C3BE',
+    borderRadius: 8,
+    paddingVertical: 10,
     alignItems: 'center',
-    marginBottom: 4,
   },
-  dangerTitle: {
-    color: '#FFFFFF',
-    fontSize: 14,
+  copyButtonText: {
+    color: '#312C51',
     fontWeight: '800',
+    fontSize: 12,
+  },
+
+  editProfileButton: {
+    backgroundColor: '#48426D',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#5A5380',
+    marginBottom: 20,
+  },
+  editProfileButtonText: {
+    color: '#F0C3BE',
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+
+  primaryButton: {
+    backgroundColor: '#F0C3BE',
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    marginTop: 16,
+  },
+  primaryButtonText: {
+    color: '#312C51',
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  savButton: {
+    marginBottom: 40,
+  },
+  buttonDisabled: {
+    opacity: 0.6,
+  },
+
+  successNotification: {
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    borderColor: '#22C55E',
+    borderWidth: 1,
+    borderRadius: 10,
+    padding: 12,
+    marginTop: 12,
+  },
+  successNotificationText: {
+    color: '#22C55E',
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+
+  // Modal
+  modalContainer: {
+    flex: 1,
+    backgroundColor: '#312C51',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#5A5380',
+    backgroundColor: '#48426D',
+  },
+  modalCloseButton: {
+    fontSize: 24,
+    color: '#9A8FA3',
+    fontWeight: '600',
+    width: 30,
+    textAlign: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#F0C3BE',
+    letterSpacing: 0.3,
+  },
+  modalContent: {
     flex: 1,
   },
-  dangerBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
+  modalPad: {
+    paddingHorizontal: 16,
+    paddingTop: 20,
   },
-  dangerBadgeText: {
-    color: '#EF4444',
-    fontSize: 9,
-    fontWeight: '900',
+
+  formSection: {
+    marginBottom: 20,
   },
-  dangerTime: {
-    color: '#94A3B8',
+  formLabel: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#D4C5BE',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+  },
+  formInput: {
+    backgroundColor: '#312C51',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    color: '#F0C3BE',
+    fontSize: 14,
+    borderWidth: 1,
+    borderColor: '#5A5380',
+    fontWeight: '500',
+  },
+  formHelper: {
     fontSize: 11,
+    color: '#9A8FA3',
+    marginTop: 6,
+    fontWeight: '500',
+  },
+
+  optionsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 10,
+  },
+  optionChip: {
+    borderWidth: 1.5,
+    borderColor: '#5A5380',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
     marginBottom: 6,
   },
-  dangerAdvice: {
-    color: '#CBD5E1',
-    fontSize: 12,
-    lineHeight: 16,
+  optionChipActive: {
+    backgroundColor: '#F0C3BE',
+    borderColor: '#F0C3BE',
   },
-  adBanner: {
+  optionChipText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#D4C5BE',
+  },
+  optionChipTextActive: {
+    color: '#312C51',
+    fontWeight: '800',
+  },
+
+  notificationOverlay: {
     position: 'absolute',
-    bottom: 0,
+    top: 0,
     left: 0,
     right: 0,
-    backgroundColor: '#1E293B',
-    borderTopWidth: 1,
-    borderTopColor: '#334155',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    flexDirection: 'row',
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
     alignItems: 'center',
+    pointerEvents: 'none',
   },
-  adBadge: {
-    backgroundColor: '#F59E0B',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginRight: 8,
+  notificationCard: {
+    backgroundColor: '#48426D',
+    borderRadius: 16,
+    padding: 24,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#F0C3BE',
   },
-  adBadgeText: {
-    color: '#000',
-    fontSize: 9,
+  notificationIcon: {
+    fontSize: 48,
+    marginBottom: 12,
+  },
+  notificationTitle: {
+    fontSize: 16,
     fontWeight: '900',
+    color: '#F0C3BE',
+    marginBottom: 6,
   },
-  adText: {
-    color: '#CBD5E1',
-    fontSize: 11,
-    flex: 1,
+  notificationText: {
+    fontSize: 12,
+    color: '#D4C5BE',
+    fontWeight: '500',
   },
 });
