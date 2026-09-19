@@ -10,8 +10,9 @@ quietly signals for help, paired with a live watcher dashboard.
 **Passenger side:** Open the app before you travel. The screen stays black —
 nothing to explain, nothing to hide. A double-tap or loud distress sound
 silently sends your GPS location and an audio clip to your chosen watcher.
+send alerts through sms
 
-**Watcher side:** Log into the dashboard from any browser. Watch live on a map.
+**Watcher side:* Log into the dashboard from any browser. Watch live on a map.
 When an alert fires, you see the location immediately, can listen to the audio
 clip, open Google Maps, and mark the incident resolved when handled.
 
@@ -52,7 +53,7 @@ pnpm dev
 ```
 
 Or individually:
-```bash
+``bash
 pnpm passenger   # Expo dev server (scan QR with Expo Go)
 pnpm watcher     # Next.js dev server → localhost:3000
 ```
