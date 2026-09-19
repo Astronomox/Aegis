@@ -15,7 +15,7 @@ interface AppTopBarProps {
 const NAV_LINKS = [
   { label: 'Live', path: '/dashboard' },
   { label: 'Passengers', path: '/dashboard/passengers' },
-  { label: '🤖 AI Safety', path: '/dashboard/ai-safety' },
+  { label: 'AI Safety', path: '/dashboard/ai-safety' },
   { label: 'History', path: '/dashboard/history' },
 ];
 

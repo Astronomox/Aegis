@@ -5,7 +5,6 @@ import AppTopBar from '@/components/AppTopBar';
 import {
   detectAIAnomalies,
   aggregateSOSClusters,
-  fetchOpenRouterBriefing,
   DANGEROUS_ROUTES_DATA,
   type AIAnomaly,
   type SOSCluster,
@@ -13,7 +12,6 @@ import {
 } from '@/lib/ai-safety';
 import { MOCK_INCIDENTS, MOCK_TRIPS } from '@/lib/mock-data';
 import type { Incident, Trip } from '@/types';
-import { supabase, MOCK_MODE } from '@/lib/supabase';
 
 export default function AISafetyPage() {
   const [incidents, setIncidents] = useState<Incident[]>([]);
@@ -23,11 +21,6 @@ export default function AISafetyPage() {
   const [selectedRoute, setSelectedRoute] = useState<RouteSafetyAdvisory | null>(DANGEROUS_ROUTES_DATA[0]);
   const [broadcastSent, setBroadcastSent] = useState(false);
   const [scanning, setScanning] = useState(false);
-
-  // OpenRouter State (model: openrouter/free)
-  const [openRouterKey, setOpenRouterKey] = useState<string>('');
-  const [openRouterBriefing, setOpenRouterBriefing] = useState<string>('');
-  const [generatingBriefing, setGeneratingBriefing] = useState(false);
 
   useEffect(() => {
     async function loadData() {
@@ -76,14 +69,6 @@ export default function AISafetyPage() {
     setTimeout(() => setBroadcastSent(false), 3000);
   };
 
-  const handleGenerateLLMBriefing = async () => {
-    setGeneratingBriefing(true);
-    const summaryPrompt = `Analyze current active trips (${trips.length}) and active SOS alerts (${incidents.length}). Active anomalies: ${anomalies.map(a => a.title).join('; ')}. Route: ${selectedRoute?.routeName || 'Interstate Highways'}. Provide a 3-bullet security synthesis for dispatchers.`;
-    const res = await fetchOpenRouterBriefing(summaryPrompt, openRouterKey);
-    setOpenRouterBriefing(res);
-    setGeneratingBriefing(false);
-  };
-
   const getRiskColor = (level: string) => {
     switch (level) {
       case 'SEVERE':
@@ -101,21 +86,20 @@ export default function AISafetyPage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--color-paper)', color: 'var(--color-ink)', fontFamily: 'var(--font-body)' }}>
+    <div style={{ minHeight: '100vh', width: '100%', overflowY: 'auto', background: 'var(--color-paper)', color: 'var(--color-ink)', fontFamily: 'var(--font-body)' }}>
       <AppTopBar variant="static" />
 
-      <main style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 16px' }}>
+      <main style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 16px 60px 16px' }}>
         {/* PAGE HEADER */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 16, marginBottom: 20 }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-              <span style={{ fontSize: 24 }}>🤖</span>
               <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 800, color: 'var(--color-ink)' }}>
                 AI Safety & Dangerous Routes Intelligence
               </h1>
             </div>
             <p style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-muted)', marginTop: 4 }}>
-              Powered by <strong>OpenRouter (openrouter/free)</strong> for real-time natural language threat briefings & spatial anomaly detection.
+              Automated spatial-temporal anomaly detection, SOS distress spatial clusters, and interstate route security advisories.
             </p>
           </div>
 
@@ -130,62 +114,9 @@ export default function AISafetyPage() {
                 color: 'var(--color-ink)', cursor: 'pointer',
               }}
             >
-              {scanning ? '⏳ Scanning Telemetry...' : '🔄 Run Telemetry Scan'}
+              {scanning ? 'Scanning Telemetry...' : 'Run Telemetry Scan'}
             </button>
           </div>
-        </div>
-
-        {/* OPENROUTER CONFIGURATION & LLM BRIEFING CARD */}
-        <div style={{
-          background: 'var(--color-paper-raised)', border: '1px solid var(--color-accent)',
-          borderRadius: 'var(--radius-lg)', padding: 16, marginBottom: 24,
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10, marginBottom: 10 }}>
-            <div style={{ fontSize: 'var(--text-sm)', fontWeight: 800, color: 'var(--color-accent)', fontFamily: 'var(--font-mono)' }}>
-              🌐 OPENROUTER AI ENGINE (MODEL: <span style={{ color: 'var(--color-safe)' }}>openrouter/free</span>)
-            </div>
-            <div style={{ fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', color: 'var(--color-ink-faint)' }}>
-              STATUS: {openRouterKey ? '🔑 CUSTOM KEY ACTIVE' : '⚡ DEFAULT ENGINE'}
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 12 }}>
-            <input
-              type="password"
-              placeholder="Paste OpenRouter API Key (e.g. sk-or-v1-...)"
-              value={openRouterKey}
-              onChange={(e) => setOpenRouterKey(e.target.value)}
-              style={{
-                flex: 1, minWidth: 260, padding: '8px 12px', background: 'var(--color-paper)',
-                border: '1px solid var(--color-rule)', borderRadius: 'var(--radius-sm)',
-                fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', color: 'var(--color-ink)',
-              }}
-            />
-            <button
-              onClick={handleGenerateLLMBriefing}
-              disabled={generatingBriefing}
-              style={{
-                padding: '8px 16px', background: 'var(--color-accent)', color: 'var(--color-paper)',
-                border: 'none', borderRadius: 'var(--radius-sm)',
-                fontSize: 'var(--text-xs)', fontWeight: 800, fontFamily: 'var(--font-mono)', cursor: 'pointer',
-              }}
-            >
-              {generatingBriefing ? '⏳ Querying OpenRouter...' : '✨ Generate OpenRouter AI Briefing'}
-            </button>
-          </div>
-
-          {openRouterBriefing && (
-            <div style={{
-              background: 'var(--color-paper)', border: '1px solid var(--color-rule)',
-              borderRadius: 'var(--radius-md)', padding: 14, fontSize: 'var(--text-sm)',
-              color: 'var(--color-ink)', lineHeight: 1.6, whiteSpace: 'pre-wrap',
-            }}>
-              <div style={{ fontSize: 'var(--text-xs)', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'var(--color-safe)', marginBottom: 6 }}>
-                🤖 OPENROUTER AI SECURITY BRIEFING:
-              </div>
-              {openRouterBriefing}
-            </div>
-          )}
         </div>
 
         {/* BROADCAST ALERT NOTIFICATION BANNER */}
@@ -196,7 +127,7 @@ export default function AISafetyPage() {
             fontSize: 'var(--text-sm)', fontWeight: 700, fontFamily: 'var(--font-mono)',
             marginBottom: 20, textAlign: 'center',
           }}>
-            📡 AI Route Advisory Broadcast Sent to All Monitored Passengers & Fleet Drivers!
+            AI Route Advisory Broadcast Sent to All Monitored Passengers & Fleet Drivers!
           </div>
         )}
 
@@ -237,7 +168,7 @@ export default function AISafetyPage() {
             <div style={{ background: 'var(--color-paper-raised)', border: '1px solid var(--color-rule)', borderRadius: 'var(--radius-lg)', padding: 18 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, paddingBottom: 10, borderBottom: '1px solid var(--color-rule)' }}>
                 <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 800, color: 'var(--color-accent)', fontFamily: 'var(--font-mono)' }}>
-                  📡 AI ANOMALY RADAR FEED
+                  AI ANOMALY RADAR FEED
                 </h2>
                 <span style={{ fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', color: 'var(--color-safe)' }}>LIVE SCANNING</span>
               </div>
@@ -266,7 +197,7 @@ export default function AISafetyPage() {
                       </p>
                       <div style={{ marginTop: 8, background: 'var(--color-paper)', padding: 8, borderRadius: 'var(--radius-sm)', border: '1px solid var(--color-rule)' }}>
                         <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--color-accent)' }}>
-                          💡 RECOMMENDED ACTION:
+                          RECOMMENDED ACTION:
                         </span>
                         <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-muted)', marginTop: 2 }}>
                           {anom.recommendedAction}
@@ -282,7 +213,7 @@ export default function AISafetyPage() {
             <div style={{ background: 'var(--color-paper-raised)', border: '1px solid var(--color-rule)', borderRadius: 'var(--radius-lg)', padding: 18 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, paddingBottom: 10, borderBottom: '1px solid var(--color-rule)' }}>
                 <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 800, color: 'var(--color-accent)', fontFamily: 'var(--font-mono)' }}>
-                  📍 SOS SPATIAL CLUSTER AGGREGATIONS
+                  SOS SPATIAL CLUSTER AGGREGATIONS
                 </h2>
                 <span style={{ fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', color: 'var(--color-ink-faint)' }}>HEATMAP DATA</span>
               </div>
@@ -312,8 +243,8 @@ export default function AISafetyPage() {
                     </div>
 
                     <div style={{ display: 'flex', gap: 16, marginTop: 6, fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', color: 'var(--color-ink-muted)' }}>
-                      <span>🚨 {c.incidentCount} distress alerts</span>
-                      <span>⚡ {c.dominantTrigger}</span>
+                      <span>ALERT: {c.incidentCount} distress events</span>
+                      <span>TRIGGER: {c.dominantTrigger}</span>
                     </div>
 
                     <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-muted)', marginTop: 6 }}>
@@ -330,7 +261,7 @@ export default function AISafetyPage() {
             <div style={{ background: 'var(--color-paper-raised)', border: '1px solid var(--color-rule)', borderRadius: 'var(--radius-lg)', padding: 18 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, paddingBottom: 10, borderBottom: '1px solid var(--color-rule)' }}>
                 <h2 style={{ fontSize: 'var(--text-base)', fontWeight: 800, color: 'var(--color-accent)', fontFamily: 'var(--font-mono)' }}>
-                  🛣️ DANGEROUS HIGHWAY ROUTES ADVISORY
+                  DANGEROUS HIGHWAY ROUTES ADVISORY
                 </h2>
                 <span style={{ fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', color: 'var(--color-danger)' }}>SECURITY MATRIX</span>
               </div>
@@ -368,7 +299,7 @@ export default function AISafetyPage() {
                       </div>
 
                       <div style={{ marginTop: 8, fontSize: 'var(--text-xs)', color: 'var(--color-ink-muted)' }}>
-                        🕒 Safe Window: <strong>{route.safeHoursWindow}</strong>
+                        Safe Window: <strong>{route.safeHoursWindow}</strong>
                       </div>
                     </div>
                   );
@@ -385,7 +316,7 @@ export default function AISafetyPage() {
 
                 <div style={{ background: 'var(--color-paper)', padding: 12, borderRadius: 'var(--radius-md)', border: '1px solid var(--color-rule)', margin: '10px 0' }}>
                   <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--color-danger)', marginBottom: 6 }}>
-                    ⚠️ KNOWN THREAT FACTORS
+                    KNOWN THREAT FACTORS
                   </div>
                   <ul style={{ margin: 0, paddingLeft: 18, fontSize: 'var(--text-xs)', color: 'var(--color-ink-muted)' }}>
                     {selectedRoute.knownThreats.map((threat) => (
@@ -396,7 +327,7 @@ export default function AISafetyPage() {
 
                 <div style={{ background: 'var(--color-paper)', padding: 12, borderRadius: 'var(--radius-md)', border: '1px solid var(--color-rule)', marginBottom: 10 }}>
                   <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--color-safe)', marginBottom: 4 }}>
-                    📱 PASSENGER ADVISORY TIP
+                    PASSENGER ADVISORY TIP
                   </div>
                   <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-muted)' }}>
                     {selectedRoute.passengerAdvice}
@@ -405,7 +336,7 @@ export default function AISafetyPage() {
 
                 <div style={{ background: 'var(--color-paper)', padding: 12, borderRadius: 'var(--radius-md)', border: '1px solid var(--color-rule)', marginBottom: 14 }}>
                   <div style={{ fontSize: 'var(--text-xs)', fontWeight: 700, fontFamily: 'var(--font-mono)', color: 'var(--color-accent)', marginBottom: 4 }}>
-                    🛡️ FLEET MANAGER DIRECTIVE
+                    FLEET MANAGER DIRECTIVE
                   </div>
                   <div style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-muted)' }}>
                     {selectedRoute.fleetManagerAdvice}
@@ -421,7 +352,7 @@ export default function AISafetyPage() {
                     cursor: 'pointer',
                   }}
                 >
-                  📢 Broadcast AI Safety Advisory to Route Drivers & Passengers
+                  Broadcast AI Safety Advisory to Route Drivers & Passengers
                 </button>
               </div>
             )}

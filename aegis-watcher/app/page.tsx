@@ -32,7 +32,7 @@ export default function LandingPage() {
       </nav>
 
       {/* HERO - warm gradient into photo */}
-      <section style={{ position: 'relative', minHeight: 480, overflow: 'hidden' }}>
+      <section style={{ position: 'relative', minHeight: '100vh', overflow: 'hidden' }}>
         <div style={{
           position: 'absolute', inset: 0,
           backgroundImage: 'url(https://images.unsplash.com/photo-1544620347-c4fd4a3d5957?w=1400&h=700&fit=crop)',

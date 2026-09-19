@@ -522,7 +522,7 @@ export default function PassengerMainScreen({ passengerId: initialPassengerId })
     return (
       <View style={styles.tabContent}>
         <View style={styles.profileHeader}>
-          <Text style={styles.profileTitle}>🗺️ Passenger Route & Safety Map</Text>
+          <Text style={styles.profileTitle}>Passenger Route & Safety Map</Text>
           <Text style={styles.profileSubtitle}>
             Live GPS positioning, interstate highway corridors & safe havens
           </Text>
@@ -531,7 +531,7 @@ export default function PassengerMainScreen({ passengerId: initialPassengerId })
         {/* Live Location Card */}
         <View style={styles.sosInfoCard}>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-            <Text style={styles.sosInfoTitle}>📍 Live GPS Position</Text>
+            <Text style={styles.sosInfoTitle}>Live GPS Position</Text>
             <View style={{ backgroundColor: '#10B981', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4 }}>
               <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>GPS LOCKED</Text>
             </View>
@@ -572,14 +572,14 @@ export default function PassengerMainScreen({ passengerId: initialPassengerId })
                     }).addTo(map);
 
                     L.marker([7.8023, 6.7331]).addTo(map)
-                      .bindPopup("<b>📍 You are here</b><br>Active Monitoring Locked")
+                      .bindPopup("<b>You are here</b><br>Active Monitoring Locked")
                       .openPopup();
 
                     L.circle([7.8100, 6.7400], { color: '#10b981', fillColor: '#10b981', fillOpacity: 0.3, radius: 3000 }).addTo(map)
-                      .bindPopup("<b>🛡️ Lokoja Control Post</b><br>24/7 Security Patrol Outpost");
+                      .bindPopup("<b>Lokoja Control Post</b><br>24/7 Security Patrol Outpost");
 
                     L.circle([7.5500, 6.2333], { color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.4, radius: 8000 }).addTo(map)
-                      .bindPopup("<b>⚠️ Okene Bypass High-Risk Zone</b><br>Night Travel Caution Advised");
+                      .bindPopup("<b>Okene Bypass High-Risk Zone</b><br>Night Travel Caution Advised");
                   </script>
                 </body>
                 </html>
@@ -589,7 +589,6 @@ export default function PassengerMainScreen({ passengerId: initialPassengerId })
             />
           ) : (
             <View style={{ padding: 20, alignItems: 'center' }}>
-              <Text style={{ fontSize: 40, marginBottom: 8 }}>🗺️</Text>
               <Text style={{ color: '#F8FAFC', fontWeight: '700', fontSize: 14 }}>Interactive Highway Safety Map</Text>
               <Text style={{ color: '#94A3B8', fontSize: 12, textAlign: 'center', marginTop: 4 }}>
                 Real-time OpenStreetMap rendering with active highway danger zones & emergency safe havens.
@@ -600,7 +599,7 @@ export default function PassengerMainScreen({ passengerId: initialPassengerId })
 
         {/* Nearby Safe Havens List */}
         <View style={styles.profileCard}>
-          <Text style={styles.profileSectionTitle}>🛡️ Nearby Emergency Safe Havens</Text>
+          <Text style={styles.profileSectionTitle}>Nearby Emergency Safe Havens</Text>
           <View style={{ marginTop: 8 }}>
             <View style={{ paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#1E293B' }}>
               <Text style={{ color: '#F8FAFC', fontWeight: '600', fontSize: 13 }}>Lokoja Control Command Post</Text>
@@ -621,7 +620,7 @@ export default function PassengerMainScreen({ passengerId: initialPassengerId })
     return (
       <View style={styles.tabContent}>
         <View style={styles.profileHeader}>
-          <Text style={styles.profileTitle}>🤖 AI Safety & Route Advisor</Text>
+          <Text style={styles.profileTitle}>AI Safety & Route Advisor</Text>
           <Text style={styles.profileSubtitle}>
             Automated journey anomaly detection & interstate danger advisories
           </Text>
@@ -648,10 +647,9 @@ export default function PassengerMainScreen({ passengerId: initialPassengerId })
 
         {/* AI TELEMETRY STATUS */}
         <View style={styles.profileCard}>
-          <Text style={styles.profileSectionTitle}>⚡ Active AI Safety Controls</Text>
+          <Text style={styles.profileSectionTitle}>Active AI Safety Controls</Text>
           <View style={{ marginTop: 8 }}>
             <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 4 }}>
-              <Text style={{ fontSize: 16, marginRight: 8 }}>🔊</Text>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: '#F8FAFC', fontSize: 13, fontWeight: '600' }}>Acoustic Scream & Crash Detection</Text>
                 <Text style={{ color: '#10B981', fontSize: 11 }}>Active · Auto triggers SOS on decibel spike</Text>
@@ -659,7 +657,6 @@ export default function PassengerMainScreen({ passengerId: initialPassengerId })
             </View>
 
             <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 4 }}>
-              <Text style={{ fontSize: 16, marginRight: 8 }}>📡</Text>
               <View style={{ flex: 1 }}>
                 <Text style={{ color: '#F8FAFC', fontSize: 13, fontWeight: '600' }}>Background Satellite & GSM Ping</Text>
                 <Text style={{ color: '#10B981', fontSize: 11 }}>Active · Syncs with Fleet Command every 60s</Text>
@@ -670,7 +667,7 @@ export default function PassengerMainScreen({ passengerId: initialPassengerId })
 
         {/* DANGEROUS HIGHWAY CORRIDORS MATRIX */}
         <View style={styles.profileCard}>
-          <Text style={styles.profileSectionTitle}>🛣️ Highway Dangerous Corridors Guide</Text>
+          <Text style={styles.profileSectionTitle}>Highway Dangerous Corridors Guide</Text>
           <Text style={{ color: '#94A3B8', fontSize: 11, marginBottom: 10 }}>
             Real-time security threat advisories for major Nigerian transit highways:
           </Text>
@@ -690,7 +687,7 @@ export default function PassengerMainScreen({ passengerId: initialPassengerId })
                 {route.advice}
               </Text>
               <Text style={{ color: '#10B981', fontSize: 10, marginTop: 4, fontWeight: '600' }}>
-                🕒 Optimal Travel Window: {route.safeHours}
+                Optimal Travel Window: {route.safeHours}
               </Text>
             </View>
           ))}
@@ -720,17 +717,16 @@ export default function PassengerMainScreen({ passengerId: initialPassengerId })
         {/* TAB NAVIGATION */}
         <View style={styles.tabNav}>
           {[
-            { id: 'sos', icon: '🚨', label: 'SOS' },
-            { id: 'map', icon: '🗺️', label: 'Map' },
-            { id: 'ai_safety', icon: '🤖', label: 'AI Safety' },
-            { id: 'profile', icon: '👤', label: 'Profile' },
+            { id: 'sos', label: 'SOS' },
+            { id: 'map', label: 'Map' },
+            { id: 'ai_safety', label: 'AI Safety' },
+            { id: 'profile', label: 'Profile' },
           ].map((tab) => (
             <TouchableOpacity
               key={tab.id}
               style={[styles.navTab, activeTab === tab.id && styles.navTabActive]}
               onPress={() => setActiveTab(tab.id)}
             >
-              <Text style={styles.navTabIcon}>{tab.icon}</Text>
               <Text style={[styles.navTabLabel, activeTab === tab.id && styles.navTabLabelActive]}>
                 {tab.label}
               </Text>

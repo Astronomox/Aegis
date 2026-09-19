@@ -9,5 +9,16 @@
     "footer": "Ft2",
     "tone": "utilitarian",
     "brief": "Aegis Fleet Safety Dashboard — utilitarian redesign of 4-page monitoring app"
+  },
+  {
+    "date": "2026-09-19",
+    "macrostructure": "Workbench",
+    "theme": "Coral",
+    "enrichment": "none",
+    "genre": "modern-minimal",
+    "nav": "N1b",
+    "footer": "Ft2",
+    "tone": "utilitarian",
+    "brief": "Full-app light-theme redesign — landing page, login, all dashboard pages, all components. Fixed broken token system, eliminated inline hex/rgba, unified on Coral light palette."
   }
 ]
