@@ -51,9 +51,9 @@ export default function IncidentMap({ incidents, trips = [], onMarkerClick }: Pr
         attributionControl: false,
       });
 
-      // Ultra-clean vector style tile layer without text watermarks
+      // Watermark-free OpenStreetMap tile layer
       L.tileLayer(
-        'https://{s}.basemaps.cartocdn.com/rastertiles/voyager_labels_under/{z}/{x}/{y}{r}.png',
+        'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
         { maxZoom: 19, attribution: '' }
       ).addTo(map);
 

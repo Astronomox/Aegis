@@ -35,7 +35,16 @@ function DashboardPageInner() {
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
-    item: { id: string; type: 'incident' | 'trip'; passenger_id: string };
+    item: {
+      id: string;
+      type: 'incident' | 'trip';
+      passenger_id: string;
+      created_at?: string;
+      latitude?: number;
+      longitude?: number;
+      trigger_type?: string;
+      bus_route?: string;
+    };
   } | null>(null);
 
   // High Priority Emergency Alert Banner
@@ -455,41 +464,57 @@ function DashboardPageInner() {
 
         {/* FEED LIST */}
         <div style={{ flex: 1, overflowY: 'auto', padding: 10 }}>
-          {activeSOS.map((inc) => (
-            <div
-              key={inc.id}
-              onClick={() => setSelectedItem({ id: inc.id, type: 'incident' })}
-              onContextMenu={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                setContextMenu({
-                  x: e.clientX,
-                  y: e.clientY,
-                  item: { id: inc.id, type: 'incident', passenger_id: inc.passenger_id },
-                });
-              }}
-              title="Right click for actions / dismiss"
-              style={{
-                background: 'var(--color-danger-dim)', border: '1px solid var(--color-danger)',
-                borderRadius: 'var(--radius-md)', padding: 10, marginBottom: 8, cursor: 'pointer',
-              }}
-            >
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
-                <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-danger)', fontFamily: 'var(--font-mono)' }}>SOS DISTRESS</span>
-                <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-faint)' }}>now</span>
+          {activeSOS.map((inc) => {
+            const formattedTime = inc.created_at
+              ? new Date(inc.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+              : 'Just now';
+            return (
+              <div
+                key={inc.id}
+                onClick={() => setSelectedItem({ id: inc.id, type: 'incident' })}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setContextMenu({
+                    x: e.clientX,
+                    y: e.clientY,
+                    item: {
+                      id: inc.id,
+                      type: 'incident',
+                      passenger_id: inc.passenger_id,
+                      created_at: inc.created_at,
+                      latitude: inc.latitude,
+                      longitude: inc.longitude,
+                      trigger_type: inc.trigger_type,
+                    },
+                  });
+                }}
+                title="Right click for metadata & actions"
+                style={{
+                  background: 'var(--color-danger-dim)', border: '1px solid var(--color-danger)',
+                  borderRadius: 'var(--radius-md)', padding: 10, marginBottom: 8, cursor: 'pointer',
+                }}
+              >
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
+                  <span style={{ fontSize: 'var(--text-xs)', fontWeight: 700, color: 'var(--color-danger)', fontFamily: 'var(--font-mono)' }}>SOS DISTRESS</span>
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-muted)', fontFamily: 'var(--font-mono)' }}>{formattedTime}</span>
+                </div>
+                <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--color-ink)' }}>
+                  {getPassengerNameLabel(inc.passenger_id)}
+                </div>
+                <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--color-ink-muted)', marginTop: 3 }}>
+                  {inc.latitude.toFixed(4)}, {inc.longitude.toFixed(4)}
+                </div>
               </div>
-              <div style={{ fontSize: 'var(--text-base)', fontWeight: 700, color: 'var(--color-ink)' }}>
-                {getPassengerNameLabel(inc.passenger_id)}
-              </div>
-              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 'var(--text-xs)', color: 'var(--color-ink-muted)', marginTop: 3 }}>
-                {inc.latitude.toFixed(4)}, {inc.longitude.toFixed(4)}
-              </div>
-            </div>
-          ))}
+            );
+          })}
 
           {displayTrips.map((trip) => {
             const isAlert = trip.status === 'alert';
             const isActive = trip.status === 'active';
+            const formattedTime = trip.created_at
+              ? new Date(trip.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+              : '';
 
             return (
               <div
@@ -501,10 +526,18 @@ function DashboardPageInner() {
                   setContextMenu({
                     x: e.clientX,
                     y: e.clientY,
-                    item: { id: trip.id, type: 'trip', passenger_id: trip.passenger_id },
+                    item: {
+                      id: trip.id,
+                      type: 'trip',
+                      passenger_id: trip.passenger_id,
+                      created_at: trip.created_at,
+                      latitude: trip.latitude,
+                      longitude: trip.longitude,
+                      bus_route: trip.bus_route,
+                    },
                   });
                 }}
-                title="Right click for actions"
+                title="Right click for metadata & actions"
                 style={{
                   background: selectedItem?.id === trip.id ? 'var(--color-paper-hover)' : 'transparent',
                   border: isAlert ? '1px solid var(--color-danger)' : '1px solid var(--color-rule)',
@@ -519,7 +552,9 @@ function DashboardPageInner() {
                   }}>
                     {isAlert ? 'MISSED CHECKOUT' : isActive ? 'IN TRANSIT' : 'ARRIVED'}
                   </span>
-                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-faint)', fontFamily: 'var(--font-mono)' }}>{trip.vehicle_id || '—'}</span>
+                  <span style={{ fontSize: 'var(--text-xs)', color: 'var(--color-ink-faint)', fontFamily: 'var(--font-mono)' }}>
+                    {formattedTime || trip.vehicle_id || '—'}
+                  </span>
                 </div>
                 <div style={{ fontSize: 'var(--text-base)', fontWeight: 600, color: 'var(--color-ink)' }}>{trip.passenger_name}</div>
                 <div style={{ fontSize: 'var(--text-sm)', color: 'var(--color-ink-muted)', marginTop: 2 }}>{trip.bus_route}</div>
@@ -704,21 +739,36 @@ function DashboardPageInner() {
         <div
           style={{
             position: 'fixed',
-            left: Math.min(contextMenu.x, typeof window !== 'undefined' ? window.innerWidth - 240 : contextMenu.x),
-            top: Math.min(contextMenu.y, typeof window !== 'undefined' ? window.innerHeight - 200 : contextMenu.y),
+            left: Math.min(contextMenu.x, typeof window !== 'undefined' ? window.innerWidth - 280 : contextMenu.x),
+            top: Math.min(contextMenu.y, typeof window !== 'undefined' ? window.innerHeight - 300 : contextMenu.y),
             zIndex: 1000,
             background: 'var(--color-paper-raised)',
             border: '1px solid var(--color-rule)',
             borderRadius: 'var(--radius-md)',
             boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
             padding: '6px 0',
-            minWidth: 240,
+            minWidth: 260,
             fontFamily: 'var(--font-mono)',
           }}
           onClick={(e) => e.stopPropagation()}
         >
           <div style={{ padding: '8px 14px', fontSize: 10, fontWeight: 800, color: 'var(--color-accent)', borderBottom: '1px solid var(--color-rule)', letterSpacing: '0.08em' }}>
             ACTIONS: {getPassengerNameLabel(contextMenu.item.passenger_id).toUpperCase()}
+          </div>
+
+          {/* METADATA INFO BOX */}
+          <div style={{ padding: '8px 14px', background: 'var(--color-paper)', borderBottom: '1px solid var(--color-rule)', fontSize: 'var(--text-xs)' }}>
+            <div style={{ color: 'var(--color-ink-muted)', marginBottom: 2 }}>
+              ⏱️ <strong>Time:</strong> {contextMenu.item.created_at ? new Date(contextMenu.item.created_at).toLocaleString([], { dateStyle: 'short', timeStyle: 'medium' }) : new Date().toLocaleTimeString()}
+            </div>
+            {contextMenu.item.latitude !== undefined && contextMenu.item.longitude !== undefined && (
+              <div style={{ color: 'var(--color-ink-muted)', marginBottom: 2 }}>
+                📍 <strong>GPS:</strong> {contextMenu.item.latitude.toFixed(4)}, {contextMenu.item.longitude.toFixed(4)}
+              </div>
+            )}
+            <div style={{ color: 'var(--color-ink-muted)' }}>
+              ⚡ <strong>Type:</strong> {contextMenu.item.type === 'incident' ? (contextMenu.item.trigger_type || 'SOS Panic Distress') : (contextMenu.item.bus_route || 'Interstate Trip')}
+            </div>
           </div>
 
           <button
