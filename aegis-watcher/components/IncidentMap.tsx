@@ -43,7 +43,6 @@ export default function IncidentMap({ incidents, onMarkerClick }: Props) {
 
     loadLeaflet().then((L) => {
       if (mapInstanceRef.current) return;
-
       const map = L.map(mapRef.current!, {
         center: [6.5244, 3.3792],
         zoom: 11,
@@ -51,7 +50,7 @@ export default function IncidentMap({ incidents, onMarkerClick }: Props) {
         attributionControl: false,
       });
 
-      // Light, clean basemap to match the light-themed dashboard
+      // Warm, clean light map
       L.tileLayer(
         'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
         { maxZoom: 19 }
@@ -81,39 +80,34 @@ export default function IncidentMap({ incidents, onMarkerClick }: Props) {
 
     data.forEach((inc) => {
       const isActive = inc.status === 'active';
+      const size = isActive ? 36 : 12;
 
-      // Pulsing ring for active, static dot for resolved
-      const size = isActive ? 40 : 14;
       const icon = L.divIcon({
         className: '',
         html: isActive
           ? `<div style="position:relative;width:${size}px;height:${size}px;">
-              <div style="position:absolute;inset:0;border-radius:50%;border:2px solid rgba(255,59,59,0.6);animation:radar 2s ease-out infinite;"></div>
-              <div style="position:absolute;inset:0;border-radius:50%;border:1px solid rgba(255,59,59,0.3);animation:radar 2s ease-out infinite 0.5s;"></div>
-              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:10px;height:10px;border-radius:50%;background:#ff3b3b;box-shadow:0 0 12px #ff3b3b,0 0 24px rgba(255,59,59,0.4);"></div>
+              <div style="position:absolute;inset:0;border-radius:50%;border:2px solid rgba(224,64,64,0.4);animation:radar 2s ease-out infinite;"></div>
+              <div style="position:absolute;inset:0;border-radius:50%;border:1px solid rgba(224,64,64,0.2);animation:radar 2s ease-out infinite 0.6s;"></div>
+              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:12px;height:12px;border-radius:50%;background:#E04040;border:2.5px solid #fff;box-shadow:0 2px 8px rgba(224,64,64,0.4);"></div>
             </div>`
-          : `<div style="width:8px;height:8px;border-radius:50%;background:rgba(20,22,28,0.35);border:1px solid rgba(20,22,28,0.15);"></div>`,
+          : `<div style="width:10px;height:10px;border-radius:50%;background:var(--blue);opacity:0.3;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.1);"></div>`,
         iconSize: [size, size],
         iconAnchor: [size / 2, size / 2],
       });
 
       const marker = L.marker([inc.latitude, inc.longitude], { icon }).addTo(map);
+      if (onMarkerClick) marker.on('click', () => onMarkerClick(inc.id));
 
-      if (onMarkerClick) {
-        marker.on('click', () => onMarkerClick(inc.id));
-      }
-
-      // Tooltip on hover - Palantir data style
       marker.bindTooltip(
-        `<div style="font-family:'JetBrains Mono',monospace;font-size:10px;line-height:1.6;padding:2px 0;">
-          <div style="color:${isActive ? '#d92d2d' : '#888'};font-weight:700;font-size:9px;letter-spacing:2px;margin-bottom:2px;">${isActive ? '● ACTIVE THREAT' : '○ RESOLVED'}</div>
-          <div style="color:#333;">${inc.latitude.toFixed(5)}, ${inc.longitude.toFixed(5)}</div>
-          <div style="color:#999;font-size:9px;">${inc.trigger_type.toUpperCase()} TRIGGER</div>
+        `<div style="font-family:'Montserrat',sans-serif;font-size:12px;line-height:1.5;padding:2px 0;">
+          <div style="font-weight:700;color:${isActive ? '#E04040' : '#888'};font-size:11px;margin-bottom:2px;">${isActive ? 'Active alert' : 'Resolved'}</div>
+          <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#555;">${inc.latitude.toFixed(5)}, ${inc.longitude.toFixed(5)}</div>
+          <div style="font-size:11px;color:#999;margin-top:2px;">${inc.trigger_type === 'audio' ? 'Sound detected' : 'Manual trigger'}</div>
         </div>`,
         {
           className: 'aegis-tooltip',
           direction: 'top',
-          offset: [0, isActive ? -24 : -10],
+          offset: [0, isActive ? -20 : -8],
         }
       );
 
@@ -133,18 +127,16 @@ export default function IncidentMap({ incidents, onMarkerClick }: Props) {
       <style>{`
         @keyframes radar {
           0% { transform: scale(0.5); opacity: 1; }
-          100% { transform: scale(2.5); opacity: 0; }
+          100% { transform: scale(2.8); opacity: 0; }
         }
         .aegis-tooltip {
-          background: rgba(255,255,255,0.96) !important;
-          border: 1px solid rgba(0,0,0,0.08) !important;
-          border-radius: 6px !important;
-          padding: 8px 12px !important;
-          box-shadow: 0 8px 32px rgba(0,0,0,0.12) !important;
-          backdrop-filter: blur(12px) !important;
+          background: #fff !important;
+          border: 1px solid rgba(15,33,103,0.1) !important;
+          border-radius: 12px !important;
+          padding: 10px 14px !important;
+          box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
         }
-        .aegis-tooltip::before { display: none !important; }
-        .leaflet-tooltip-top::before { display: none !important; }
+        .aegis-tooltip::before, .leaflet-tooltip-top::before { display: none !important; }
       `}</style>
     </>
   );
