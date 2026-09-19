@@ -24,3 +24,18 @@
       ]
     },
     "ios": {
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSMicrophoneUsageDescription": "Aegis uses the microphone to detect distress sounds silently.",
+        "NSLocationWhenInUseUsageDescription": "Aegis sends your location to watchers during an emergency."
+      }
+    },
+    "plugins": [
+      "expo-location",
+      "expo-audio"
+    ],
+    "updates": {
+      "enabled": false
+    }
+  }
+}
