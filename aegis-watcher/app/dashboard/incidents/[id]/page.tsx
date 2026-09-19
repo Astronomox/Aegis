@@ -122,3 +122,67 @@ export default function IncidentDetailPage() {
             }}>
               {isActive ? 'ACTIVE EMERGENCY' : 'RESOLVED'}
             </span>
+          </div>
+          <button
+            onClick={() => router.push('/dashboard')}
+            style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontFamily: 'var(--mono)', fontSize: 11, cursor: 'pointer', letterSpacing: 1 }}
+          >← BACK</button>
+        </div>
+
+        <div style={s.body}>
+          <div style={s.label}>PASSENGER</div>
+          <div style={s.value}>{passengerName || incident.passenger_id}</div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 8 }}>
+            <div>
+              <div style={s.label}>LATITUDE</div>
+              <div style={{ ...s.value, fontSize: 13 }}>{incident.latitude.toFixed(6)}</div>
+            </div>
+            <div>
+              <div style={s.label}>LONGITUDE</div>
+              <div style={{ ...s.value, fontSize: 13 }}>{incident.longitude.toFixed(6)}</div>
+            </div>
+            <div>
+              <div style={s.label}>TRIGGER TYPE</div>
+              <div style={{ ...s.value, fontSize: 13 }}>{incident.trigger_type.toUpperCase()}</div>
+            </div>
+            <div>
+              <div style={s.label}>TIMESTAMP</div>
+              <div style={{ ...s.value, fontSize: 11 }}>{new Date(incident.created_at).toLocaleString()}</div>
+            </div>
+          </div>
+
+          {incident.audio_url && !incident.audio_url.startsWith('mock://') && (
+            <div style={{ marginBottom: 20 }}>
+              <div style={s.label}>AUDIO CAPTURE</div>
+              <audio controls src={incident.audio_url} style={{ width: '100%', marginTop: 6 }} />
+            </div>
+          )}
+
+          <a
+            href={`https://www.google.com/maps?q=${incident.latitude},${incident.longitude}`}
+            target="_blank" rel="noopener noreferrer"
+            style={{
+              ...s.btn, display: 'block', textAlign: 'center',
+              background: 'var(--blue-dim)', color: 'var(--blue)',
+              border: '1px solid rgba(68,138,255,0.15)', textDecoration: 'none',
+            }}
+          >OPEN IN GOOGLE MAPS</a>
+
+          {isActive && (
+            <button
+              onClick={handleResolve}
+              disabled={resolving}
+              style={{
+                ...s.btn,
+                background: 'var(--green-dim)', color: 'var(--green)',
+                border: '1px solid rgba(0,230,118,0.15)',
+                opacity: resolving ? 0.5 : 1,
+              }}
+            >{resolving ? 'RESOLVING...' : 'MARK RESOLVED'}</button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
