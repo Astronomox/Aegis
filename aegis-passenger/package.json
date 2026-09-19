@@ -7,3 +7,12 @@
     "android": "expo start --android",
     "ios": "expo start --ios"
   },
+  "dependencies": {
+    "expo": "^57.0.0",
+    "expo-location": "*",
+    "expo-status-bar": "*",
+    "expo-font": "*",
+    "expo-haptics": "*",
+    "expo-audio": "*",
+    "react": "19.2.0",
+    "react-native": "~0.86.3",
