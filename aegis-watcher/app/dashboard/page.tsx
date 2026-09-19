@@ -745,7 +745,7 @@ function DashboardPageInner() {
             background: 'var(--color-paper-raised)',
             border: '1px solid var(--color-rule)',
             borderRadius: 'var(--radius-md)',
-            boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
+            boxShadow: 'var(--shadow-lg)',
             padding: '6px 0',
             minWidth: 260,
             fontFamily: 'var(--font-mono)',
@@ -841,16 +841,16 @@ function DashboardPageInner() {
           style={{
             position: 'fixed', top: 16, left: '50%', transform: 'translateX(-50%)',
             zIndex: 999, width: '90%', maxWidth: 560,
-            background: '#7F1D1D', border: '2px solid #EF4444',
-            borderRadius: 'var(--radius-lg)', boxShadow: '0 12px 40px rgba(239,68,68,0.5)',
-            padding: 16, color: '#FFFFFF',
+            background: 'var(--color-danger)', border: '2px solid var(--color-danger)',
+            borderRadius: 'var(--radius-lg)', boxShadow: '0 12px 40px oklch(58% 0.22 25 / 0.3)',
+            padding: 16, color: 'var(--color-paper-raised)',
           }}
         >
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <span style={{ fontSize: 28, animation: 'pulse 1s infinite' }}>🚨</span>
               <div>
-                <div style={{ fontSize: 'var(--text-xs)', fontWeight: 800, fontFamily: 'var(--font-mono)', color: '#FCA5A5', letterSpacing: '0.1em' }}>
+                <div style={{ fontSize: 'var(--text-xs)', fontWeight: 800, fontFamily: 'var(--font-mono)', color: 'oklch(90% 0.04 25)', letterSpacing: '0.1em' }}>
                   IMPORTANT DISTRESS SOS ALERT
                 </div>
                 <div style={{ fontSize: 'var(--text-lg)', fontWeight: 800, marginTop: 2 }}>
@@ -861,13 +861,13 @@ function DashboardPageInner() {
 
             <button
               onClick={() => setAlertBanner(null)}
-              style={{ background: 'none', border: 'none', color: '#FCA5A5', fontSize: 22, cursor: 'pointer', padding: 4 }}
+              style={{ background: 'none', border: 'none', color: 'oklch(90% 0.04 25)', fontSize: 22, cursor: 'pointer', padding: 4 }}
             >
               ×
             </button>
           </div>
 
-          <div style={{ fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', color: '#FECACA', marginTop: 8 }}>
+          <div style={{ fontSize: 'var(--text-xs)', fontFamily: 'var(--font-mono)', color: 'oklch(93% 0.03 25)', marginTop: 8 }}>
             GPS: {alertBanner.latitude.toFixed(4)}, {alertBanner.longitude.toFixed(4)} · Trigger: {alertBanner.trigger_type === 'audio' ? 'Decibel Spike Warning' : 'Manual SOS Panic Button'}
           </div>
 
@@ -878,7 +878,7 @@ function DashboardPageInner() {
                 setAlertBanner(null);
               }}
               style={{
-                flex: 1, padding: '9px 0', background: '#EF4444', color: '#fff',
+                flex: 1, padding: '9px 0', background: 'var(--color-danger)', color: 'var(--color-paper-raised)',
                 border: 'none', borderRadius: 'var(--radius-sm)',
                 fontSize: 'var(--text-xs)', fontWeight: 700, fontFamily: 'var(--font-mono)', cursor: 'pointer',
               }}
@@ -891,7 +891,7 @@ function DashboardPageInner() {
                 setAlertBanner(null);
               }}
               style={{
-                flex: 1, padding: '9px 0', background: 'rgba(255,255,255,0.15)', color: '#fff',
+                flex: 1, padding: '9px 0', background: 'rgba(255,255,255,0.15)', color: 'var(--color-paper-raised)',
                 border: '1px solid rgba(255,255,255,0.3)', borderRadius: 'var(--radius-sm)',
                 fontSize: 'var(--text-xs)', fontWeight: 700, fontFamily: 'var(--font-mono)', cursor: 'pointer',
               }}
@@ -901,8 +901,8 @@ function DashboardPageInner() {
             <button
               onClick={clearAllAlerts}
               style={{
-                padding: '9px 14px', background: 'transparent', color: '#FCA5A5',
-                border: '1px solid #EF4444', borderRadius: 'var(--radius-sm)',
+                padding: '9px 14px', background: 'transparent', color: 'var(--color-paper-raised)',
+                border: '1px solid var(--color-danger)', borderRadius: 'var(--radius-sm)',
                 fontSize: 'var(--text-xs)', fontWeight: 700, fontFamily: 'var(--font-mono)', cursor: 'pointer',
               }}
             >
