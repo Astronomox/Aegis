@@ -26,6 +26,10 @@ export function useCurrentUser() {
         setUser({ id: data.user.id, email: data.user.email ?? '' });
       }
       setLoading(false);
+    }).catch(() => {
+      // If the client-side session can't be read (network issue, misconfigured
+      // keys, or no session established yet), don't leave loading stuck forever.
+      setLoading(false);
     });
   }, []);
 
