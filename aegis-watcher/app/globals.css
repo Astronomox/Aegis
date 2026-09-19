@@ -1,24 +1,34 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@700;800&family=Dancing+Script:wght@600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 :root {
-  --bg: #f4f5f7;
-  --glass: rgba(255, 255, 255, 0.85);
-  --glass-border: rgba(15, 20, 30, 0.08);
-  --glass-hover: rgba(255, 255, 255, 0.95);
-  --text: #14161c;
-  --text-dim: rgba(20, 22, 28, 0.55);
-  --text-muted: rgba(20, 22, 28, 0.32);
-  --red: #d92d2d;
-  --red-glow: rgba(217, 45, 45, 0.25);
-  --red-dim: rgba(217, 45, 45, 0.08);
-  --green: #16a34a;
-  --green-dim: rgba(22, 163, 74, 0.08);
-  --blue: #2563eb;
-  --blue-dim: rgba(37, 99, 235, 0.08);
-  --mono: 'JetBrains Mono', monospace;
+  /* NITHUB-inspired: deep blue + lemon green */
+  --blue: #0F2167;
+  --blue-light: #1a3094;
+  --blue-dim: rgba(15, 33, 103, 0.06);
+  --green: #B8E62E;
+  --green-dark: #8BBF10;
+  --green-dim: rgba(184, 230, 46, 0.12);
+  --red: #E04040;
+  --red-dim: rgba(224, 64, 64, 0.08);
+
+  --bg: #fafbfc;
+  --bg-warm: #f5f6f0;
+  --white: #ffffff;
+  --card: #ffffff;
+  --card-hover: #f9faf6;
+  --border: rgba(15, 33, 103, 0.08);
+  --border-strong: rgba(15, 33, 103, 0.14);
+
+  --text: #1a1d2b;
+  --text-dim: rgba(26, 29, 43, 0.6);
+  --text-muted: rgba(26, 29, 43, 0.35);
+
+  --display: 'Plus Jakarta Sans', 'Montserrat', sans-serif;
   --sans: 'Montserrat', -apple-system, sans-serif;
-  --radius: 8px;
-  --blur: blur(16px);
+  --mono: 'JetBrains Mono', monospace;
+  --radius: 16px;
+  --radius-sm: 10px;
+  --radius-pill: 100px;
 }
 
 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -34,10 +44,112 @@ html, body {
 a { color: inherit; text-decoration: none; }
 button { font-family: inherit; cursor: pointer; border: none; }
 
-::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar { width: 5px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.12); border-radius: 4px; }
+::-webkit-scrollbar-thumb { background: rgba(15, 33, 103, 0.1); border-radius: 10px; }
 
-.leaflet-container { background: #eef0f3 !important; }
+.leaflet-container { background: #f0f1ec !important; }
 .leaflet-control-zoom { display: none !important; }
 .leaflet-control-attribution { display: none !important; }
+
+/* ============ Landing page responsive rules ============ */
+.landing-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.landing-nav-text-links {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+}
+
+.landing-split-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: center;
+}
+
+.landing-section {
+  padding: 80px 32px;
+}
+
+.landing-hero-content {
+  padding: 80px 32px 90px;
+  max-width: 600px;
+}
+
+.landing-map-shell {
+  position: relative;
+  width: 100%;
+  height: 420px;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+@media (max-width: 900px) {
+  .landing-nav-text-links {
+    display: none;
+  }
+}
+
+@media (max-width: 768px) {
+  .landing-split-grid {
+    grid-template-columns: 1fr;
+    gap: 32px;
+  }
+
+  .landing-section {
+    padding: 56px 20px;
+  }
+
+  .landing-hero-content {
+    padding: 56px 20px 64px;
+    max-width: 100%;
+  }
+
+  .landing-map-shell {
+    height: 280px;
+  }
+}
+
+@media (max-width: 480px) {
+  .landing-section {
+    padding: 44px 16px;
+  }
+
+  .landing-hero-content {
+    padding: 44px 16px 48px;
+  }
+}
+
+/* ============ Login/signup split-screen responsive rules ============ */
+.auth-image-panel {
+  flex: 1;
+  position: relative;
+  min-height: 400px;
+}
+
+@media (max-width: 860px) {
+  .auth-image-panel {
+    display: none;
+  }
+}
+
+.auth-form-panel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 32px;
+  background: #fff;
+  min-width: 320px;
+}
+
+@media (max-width: 480px) {
+  .auth-form-panel {
+    padding: 32px 20px;
+  }
+}
