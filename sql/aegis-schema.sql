@@ -33,9 +33,13 @@ create table if not exists watchers (
   created_at timestamptz default now()
 );
 
+alter table watchers add column if not exists auth_id uuid;
+alter table watchers add column if not exists label text;
+
 -- Index for watcher queries
 create index if not exists idx_watchers_passenger_id on watchers(passenger_id);
 create index if not exists idx_watchers_auth_id on watchers(auth_id);
+
 
 -- 3. PAIRING CODES (for passenger-watcher pairing)
 create table if not exists pairing_codes (
@@ -85,25 +89,33 @@ create policy "Incidents: Public read" on incidents for select using (true);
 create policy "Incidents: Public insert" on incidents for insert with check (true);
 create policy "Incidents: Public update" on incidents for update using (true);
 
--- Watchers: Authenticated users can manage watchers
+-- Watchers: Public access for demo
 drop policy if exists "Watchers: Authenticated read" on watchers;
 drop policy if exists "Watchers: Authenticated insert" on watchers;
 drop policy if exists "Watchers: Authenticated update" on watchers;
 drop policy if exists "Watchers: Authenticated delete" on watchers;
+drop policy if exists "Watchers: Public select" on watchers;
+drop policy if exists "Watchers: Public insert" on watchers;
+drop policy if exists "Watchers: Public update" on watchers;
+drop policy if exists "Watchers: Public delete" on watchers;
 
-create policy "Watchers: Authenticated read" on watchers for select using (auth.uid() is not null);
-create policy "Watchers: Authenticated insert" on watchers for insert with check (auth.uid() is not null);
-create policy "Watchers: Authenticated update" on watchers for update using (auth.uid() is not null);
-create policy "Watchers: Authenticated delete" on watchers for delete using (auth.uid() is not null);
+create policy "Watchers: Public select" on watchers for select using (true);
+create policy "Watchers: Public insert" on watchers for insert with check (true);
+create policy "Watchers: Public update" on watchers for update using (true);
+create policy "Watchers: Public delete" on watchers for delete using (true);
 
--- Pairing Codes: Public insert (for passengers), authenticated read/write
+-- Pairing Codes: Public access for demo
 drop policy if exists "Pairing Codes: Public insert" on pairing_codes;
 drop policy if exists "Pairing Codes: Authenticated read" on pairing_codes;
 drop policy if exists "Pairing Codes: Authenticated update" on pairing_codes;
+drop policy if exists "Pairing Codes: Public select" on pairing_codes;
+drop policy if exists "Pairing Codes: Public update" on pairing_codes;
 
 create policy "Pairing Codes: Public insert" on pairing_codes for insert with check (true);
-create policy "Pairing Codes: Authenticated read" on pairing_codes for select using (auth.uid() is not null);
-create policy "Pairing Codes: Authenticated update" on pairing_codes for update using (auth.uid() is not null);
+create policy "Pairing Codes: Public select" on pairing_codes for select using (true);
+create policy "Pairing Codes: Public update" on pairing_codes for update using (true);
+create policy "Pairing Codes: Public delete" on pairing_codes for delete using (true);
+
 
 -- ============================================
 -- STORAGE BUCKET for audio clips
@@ -188,10 +200,20 @@ alter table trips enable row level security;
 alter table companies enable row level security;
 alter table fleet_vehicles enable row level security;
 
+drop policy if exists "Trips: Public read" on trips;
+drop policy if exists "Trips: Public insert" on trips;
+drop policy if exists "Trips: Public update" on trips;
+drop policy if exists "Trips: Public delete" on trips;
+
 create policy "Trips: Public read" on trips for select using (true);
 create policy "Trips: Public insert" on trips for insert with check (true);
 create policy "Trips: Public update" on trips for update using (true);
+create policy "Trips: Public delete" on trips for delete using (true);
 
+drop policy if exists "Companies: Public read" on companies;
 create policy "Companies: Public read" on companies for select using (true);
+
+drop policy if exists "Fleet Vehicles: Public read" on fleet_vehicles;
 create policy "Fleet Vehicles: Public read" on fleet_vehicles for select using (true);
+
 

@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { signIn, buildSessionCookie, buildRefreshCookie } from '@/lib/auth';
-import { MOCK_MODE } from '@/lib/supabase';
 import { rateLimit, getIdentifier } from '@/lib/rate-limit';
 import { logger } from '@/lib/logger';
 
@@ -44,40 +43,43 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Password must be at least 6 characters' }, { status: 400 });
   }
 
-  // Mock mode: accept hardcoded demo credentials
-  if (MOCK_MODE) {
-    if (email === MOCK_EMAIL && password === MOCK_PASSWORD) {
-      const res = NextResponse.json({ success: true, mock: true });
-      const cookie = buildSessionCookie('mock-authenticated');
-      res.cookies.set(cookie.name, cookie.value, cookie.options);
-      return res;
+  // ALWAYS allow demo credentials watcher@aegis.demo / aegis1234
+  if (email === MOCK_EMAIL && password === MOCK_PASSWORD) {
+    logger.logAuthEvent('login_success_demo', undefined, { email });
+    const res = NextResponse.json({ success: true, mock: true });
+    const cookie = buildSessionCookie('mock-authenticated');
+    res.cookies.set(cookie.name, cookie.value, cookie.options);
+    return res;
+  }
+
+  try {
+    const { data, error } = await signIn(email, password);
+
+    if (error || !data?.session) {
+      logger.logApiError('POST', '/api/auth/login', error);
+      return NextResponse.json({ error: error?.message || 'Login failed' }, { status: 401 });
     }
+
+    logger.logAuthEvent('login_success', data.user?.id, { email });
+
+    const res = NextResponse.json({ success: true });
+    
+    // Set access token cookie (1 hour)
+    const accessCookie = buildSessionCookie(data.session.access_token);
+    res.cookies.set(accessCookie.name, accessCookie.value, accessCookie.options);
+    
+    // Set refresh token cookie (7 days)
+    if (data.session.refresh_token) {
+      const refreshCookie = buildRefreshCookie(data.session.refresh_token);
+      res.cookies.set(refreshCookie.name, refreshCookie.value, refreshCookie.options);
+    }
+    
+    return res;
+  } catch (err: any) {
+    logger.logApiError('POST', '/api/auth/login', err);
     return NextResponse.json(
-      { error: `Demo credentials: ${MOCK_EMAIL} / ${MOCK_PASSWORD}` },
+      { error: err?.message || 'Failed to authenticate with Supabase' },
       { status: 401 }
     );
   }
-
-  const { data, error } = await signIn(email, password);
-
-  if (error || !data.session) {
-    logger.logApiError('POST', '/api/auth/login', error);
-    return NextResponse.json({ error: error?.message || 'Login failed' }, { status: 401 });
-  }
-
-  logger.logAuthEvent('login_success', data.user?.id, { email });
-
-  const res = NextResponse.json({ success: true });
-  
-  // Set access token cookie (1 hour)
-  const accessCookie = buildSessionCookie(data.session.access_token);
-  res.cookies.set(accessCookie.name, accessCookie.value, accessCookie.options);
-  
-  // Set refresh token cookie (7 days)
-  if (data.session.refresh_token) {
-    const refreshCookie = buildRefreshCookie(data.session.refresh_token);
-    res.cookies.set(refreshCookie.name, refreshCookie.value, refreshCookie.options);
-  }
-  
-  return res;
 }

@@ -227,17 +227,9 @@ function DashboardPageInner() {
                 cursor: 'pointer',
               }}
             >⏱️ Sim Missed Checkout</button>
-
-            <button
-              onClick={() => setPricingModalOpen(true)}
-              style={{
-                backgroundColor: '#1E293B', color: '#38BDF8', border: '1px solid #38BDF8',
-                padding: '6px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700,
-                cursor: 'pointer',
-              }}
-            >💼 B2B Pricing & Projections</button>
           </div>
         }
+
       />
 
       {/* LEFT SIDEBAR: FLEET TRIPS & INCIDENTS FEED */}
@@ -416,87 +408,6 @@ function DashboardPageInner() {
               </a>
             </div>
           )}
-        </div>
-      )}
-
-      {/* B2B COMMERCIAL & PRICING MODAL */}
-      {pricingModalOpen && (
-        <div style={{
-          position: 'fixed', inset: 0, zIndex: 100,
-          backgroundColor: 'rgba(0, 0, 0, 0.75)', backdropFilter: 'blur(8px)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
-        }}>
-          <div style={{
-            backgroundColor: '#0F172A', border: '1px solid rgba(255, 255, 255, 0.15)',
-            borderRadius: 20, width: '100%', maxWidth: 780, maxHeight: '90vh', overflowY: 'auto',
-            padding: 28, color: '#F8FAFC', boxShadow: '0 20px 50px rgba(0,0,0,0.5)',
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, borderBottom: '1px solid #1E293B', paddingBottom: 12 }}>
-              <div>
-                <div style={{ fontSize: 11, fontWeight: 800, color: '#38BDF8', letterSpacing: 1.5 }}>AEGIS REVENUE MODEL</div>
-                <div style={{ fontSize: 22, fontWeight: 900 }}>B2B Transport Company Pricing</div>
-              </div>
-              <button
-                onClick={() => setPricingModalOpen(false)}
-                style={{ backgroundColor: '#1E293B', border: 'none', color: '#94A3B8', padding: '6px 14px', borderRadius: 10, cursor: 'pointer', fontWeight: 700 }}
-              >Close ✕</button>
-            </div>
-
-            <p style={{ color: '#94A3B8', fontSize: 14, lineHeight: 1.6, marginBottom: 20 }}>
-              &ldquo;The consumer app is the distribution channel. The fleet dashboard is the business.&rdquo; Passenger app is 100% free to maximize network adoption across Nigeria highways. Transport companies pay monthly per vehicle.
-            </p>
-
-            {/* PRICING TABLE */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14, marginBottom: 28 }}>
-              {[
-                { name: 'Starter', price: '₦5,000 / veh / mo', range: '1-20 Vehicles', features: 'Fleet map, SOS routing, basic trip tracking' },
-                { name: 'Growth', price: '₦3,500 / veh / mo', range: '20-100 Vehicles', features: 'Everything in Starter + analytics, FRSC compliance reports' },
-                { name: 'Enterprise', price: 'Custom Pricing', range: '100+ Vehicles', features: 'API integration, dedicated support, custom branding' },
-              ].map((plan, idx) => (
-                <div key={plan.name} style={{
-                  backgroundColor: idx === 1 ? 'rgba(56, 189, 248, 0.1)' : '#1E293B',
-                  border: idx === 1 ? '2px solid #38BDF8' : '1px solid rgba(255, 255, 255, 0.08)',
-                  borderRadius: 14, padding: 16,
-                }}>
-                  <div style={{ fontSize: 12, fontWeight: 800, color: idx === 1 ? '#38BDF8' : '#94A3B8' }}>{plan.name}</div>
-                  <div style={{ fontSize: 16, fontWeight: 900, color: '#FFFFFF', margin: '6px 0 2px' }}>{plan.price}</div>
-                  <div style={{ fontSize: 11, color: '#64748B', fontWeight: 700, marginBottom: 12 }}>{plan.range}</div>
-                  <div style={{ fontSize: 12, color: '#CBD5E1', lineHeight: 1.5 }}>{plan.features}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* PROJECTIONS TABLE */}
-            <div style={{ fontSize: 15, fontWeight: 800, marginBottom: 12, color: '#38BDF8' }}>Financial Projections</div>
-            <div style={{ backgroundColor: '#1E293B', borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ backgroundColor: '#0F172A', color: '#94A3B8', borderBottom: '1px solid #334155' }}>
-                    <th style={{ padding: 12 }}>Milestone</th>
-                    <th style={{ padding: 12 }}>Customers</th>
-                    <th style={{ padding: 12 }}>Vehicles</th>
-                    <th style={{ padding: 12 }}>Monthly Revenue</th>
-                    <th style={{ padding: 12 }}>ARR</th>
-                  </tr>
-                </thead>
-                <tbody style={{ color: '#E2E8F0' }}>
-                  <tr style={{ borderBottom: '1px solid #334155' }}><td style={{ padding: 12 }}>Month 1</td><td style={{ padding: 12 }}>1-2</td><td style={{ padding: 12 }}>20-40</td><td style={{ padding: 12 }}>₦70K - ₦140K</td><td style={{ padding: 12 }}>₦840K - ₦1.7M</td></tr>
-                  <tr style={{ borderBottom: '1px solid #334155' }}><td style={{ padding: 12 }}>Month 3</td><td style={{ padding: 12 }}>5-8</td><td style={{ padding: 12 }}>100-200</td><td style={{ padding: 12 }}>₦350K - ₦700K</td><td style={{ padding: 12 }}>₦4.2M - ₦8.4M</td></tr>
-                  <tr style={{ borderBottom: '1px solid #334155' }}><td style={{ padding: 12 }}>Month 6</td><td style={{ padding: 12 }}>10-15</td><td style={{ padding: 12 }}>300-500</td><td style={{ padding: 12 }}>₦1M - ₦1.75M</td><td style={{ padding: 12 }}>₦12M - ₦21M</td></tr>
-                  <tr><td style={{ padding: 12 }}>Year 1</td><td style={{ padding: 12 }}>20-30</td><td style={{ padding: 12 }}>600-1000</td><td style={{ padding: 12 }}>₦2.1M - ₦3.5M</td><td style={{ padding: 12 }}>₦25M - ₦42M</td></tr>
-                </tbody>
-              </table>
-            </div>
-
-            <div style={{ backgroundColor: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.3)', borderRadius: 12, padding: 14 }}>
-              <div style={{ fontSize: 13, fontWeight: 800, color: '#4ADE80', marginBottom: 4 }}>Why Transport Companies Pay:</div>
-              <ul style={{ color: '#CBD5E1', fontSize: 12, paddingLeft: 18, lineHeight: 1.7, margin: 0 }}>
-                <li>FRSC regulatory compliance pressure for interstate passenger safety verification</li>
-                <li>Insurance premium reductions with timestamped, GPS-verified incident data</li>
-                <li>Operational visibility across remote highway corridors</li>
-              </ul>
-            </div>
-          </div>
         </div>
       )}
 
