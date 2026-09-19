@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import type { Incident } from '@/types';
 import { supabase, MOCK_MODE } from '@/lib/supabase';
@@ -21,7 +21,7 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(hrs / 24)}d ago`;
 }
 
-export default function HistoryPage() {
+function HistoryPageInner() {
   const isMobile = useIsMobile();
   const passengerName = usePassengerNames();
   const searchParams = useSearchParams();
@@ -114,5 +114,17 @@ export default function HistoryPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function HistoryPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)', color: 'var(--text-muted)', fontSize: 14 }}>
+        Loading...
+      </div>
+    }>
+      <HistoryPageInner />
+    </Suspense>
   );
 }
